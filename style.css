@@ -1,1 +1,11 @@
 
+firstblock {
+  float: center;
+  text-align: center;
+  font-size: 16;
+  border-radius: 5em;
+  padding: 5em;
+  border-color: black;
+  background-color: olive;
+  color: white;
+}
