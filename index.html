@@ -2,11 +2,16 @@
 <html>
  <head>
   <title>Jacob Noble - Portfolio</title>
-  <meta name=viewport content="width=device-width, initial-scale=1">
+  <meta name=viewport content="width=device-width, initial-scale=1", charset="utf-8">
 	<link rel="stylesheet" type="text/css" href="style.css">
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true });
+  </script>
  </head>
 
  <body>
+  <h1> Stopping by woods on a snowy evening </h1>
   <div class="firstBlock">
    Who's woods these are, I think I know,<br>
    his house is in the village though,<br>
@@ -30,6 +35,13 @@
    <br>
   </div>
   <p>-Robert Frost</p>
+  <pre class="mermaid">
+    graph LR;
+        A-->B;
+        A-->C;
+        B-->D;
+        C-->D;
+  </pre>
   <form>
     <label for="myq">pick a number between one and ten</label>
     <input type="text" id="myq" name="myq" placeholder="hmmm...">
