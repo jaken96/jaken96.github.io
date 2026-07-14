@@ -1,2 +1,2 @@
 # jaken96.github.io
-my first website
+This is a project portfolio space for Jacob Noble.
