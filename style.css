@@ -13,8 +13,6 @@
 
 /* ===== Global Reset ===== */
 * {
-    margin: 0;
-    padding: 0;
     box-sizing: border-box;
 }
 
@@ -225,4 +223,10 @@ nav a:hover {
             rgba(255, 255, 255, 0.8),
             transparent,
             rgba(255, 255, 255, 0.3));
+}
+
+li {
+    display: list-item;
+    unicode-bidi: isolate;
+    list-style-type: disc;
 }
