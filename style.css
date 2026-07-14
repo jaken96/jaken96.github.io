@@ -149,20 +149,35 @@ nav a:hover {
 /* ===== Two Column Layout ===== */
 .two-col {
     display: flex;
+
     gap: 1rem;
     margin-top: 1.5rem;
+    /* keep the column group from stretching too wide on large screens
+       and center the cluster horizontally */
+    margin-left: 10%;
+    margin-right: 10%;
+    justify-content: center;
+    
 }
 
-.col {
-    flex: 1;
+.leftcol {
+    flex: 1 1 30pc;
+}
+.rightcol {
+    flex: 0 1 60pc;
 }
 
-/* Optional: make columns stack on small screens */
+/* Make columns stack on small screens */
 @media (max-width: 400px) {
     .two-col {
         flex-direction: column;
     }
+    .leftcol,
+    .rightcol {
+        min-width: 0;
+    }
 }
+
 
 /* ===== Glass Card ===== */
 /* Glass card styling for a frosted glass effect */
