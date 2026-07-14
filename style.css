@@ -1,4 +1,4 @@
-
+/*
 .firstBlock {
   float: center;
   text-align: center;
@@ -32,4 +32,217 @@ input[type=submit] {
     text-decoration: none;
     margin: 4px 2px;
     cursor: pointer;
+}
+*/
+/* ===== Base Colors ===== */
+:root {
+    --grey-dark: #1d1d1d;
+    --grey-mid: #4a4a4a;
+    --grey-light: #5e5e5e;
+    --black: #000000;
+    --cone-orange: #f75a00;
+
+    --text-main: #f1f1f1;
+    --text-light: #f2f2f2;
+}
+
+/* ===== Global Reset ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ===== Body ===== */
+body {
+    background: var(--grey-light);
+    color: var(--text-main);
+    font-family: Arial, Helvetica, sans-serif;
+    line-height: 1.5;
+    padding: 1rem;
+}
+
+/* ===== Poem formatting ===== */
+.citation {
+    font-style: italic;
+    color: var(--black);
+}
+
+.author {
+    color: var(--cone-orange);
+    margin-top: .25rem;
+    margin-bottom: 1rem
+}
+
+.stanza {
+    white-space: pre-wrap
+}
+
+/* ===== Layout Helpers ===== */
+.container {
+    width: 90%;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.flex {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.center-text {
+    text-align: center;
+}
+
+/* ===== Buttons ===== */
+.btn {
+    padding: 0.6rem 1.2rem;
+    border: 2px solid var(--black);
+    background: var(--grey-mid);
+    color: var(--text-light);
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.btn:hover {
+    background: var(--cone-orange);
+    color: var(--black);
+}
+
+/* ===== Cards ===== */
+.card {
+    background: var(--grey-light);
+    border: 2px solid var(--black);
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 6px;
+}
+
+.card-accent {
+    border-left: 6px solid var(--cone-orange);
+}
+
+/* ===== Headers ===== */
+h1,
+h2,
+h3 {
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+
+/* ===== Links ===== */
+a {
+    color: var(--cone-orange);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+a:hover {
+    border-color: var(--cone-orange);
+}
+
+/* ===== Forms ===== */
+input,
+textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 2px solid var(--black);
+    background: var(--grey-light);
+    color: var(--text-main);
+}
+
+input:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--cone-orange);
+}
+
+/* ===== Utility Accent ===== */
+.accent {
+    color: var(--cone-orange);
+}
+
+/* ===== Navigation ===== */
+nav {
+    background: var(--grey-dark);
+    color: var(--text-light);
+    padding: 1rem;
+}
+
+nav a {
+    color: var(--text-light);
+    text-decoration: none;
+    margin: 0 0.5rem;
+}
+
+nav a:hover {
+    color: var(--cone-orange);
+}
+
+/* ===== Two Column Layout ===== */
+.two-col {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.col {
+    flex: 1;
+}
+
+/* Optional: make columns stack on small screens */
+@media (max-width: 400px) {
+    .two-col {
+        flex-direction: column;
+    }
+}
+
+/* ===== Glass Card ===== */
+/* Glass card styling for a frosted glass effect */
+/* https://hype4.academy/tools/glassmorphism-generator */
+.glass-card {
+    width: auto;
+    height: auto;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 0 20px 10px rgba(255, 255, 255, 1);
+    position: relative;
+    overflow: hidden;
+    display: inline-block;
+}
+
+.glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.8),
+            transparent);
+}
+
+.glass-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(180deg,
+            rgba(255, 255, 255, 0.8),
+            transparent,
+            rgba(255, 255, 255, 0.3));
 }

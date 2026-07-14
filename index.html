@@ -1,63 +1,62 @@
 <!DOCTYPE html>
 <html>
- <head>
+
+<head>
   <title>Jacob Noble - Portfolio</title>
-  <meta name=viewport content="width=device-width, initial-scale=1", charset="utf-8">
-	<link rel="stylesheet" type="text/css" href="style.css">
+  <meta name=viewport content="width=device-width, initial-scale=1" , charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="style.css">
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
     mermaid.initialize({ startOnLoad: true });
   </script>
- </head>
+</head>
 
- <body>
+<body>
   <nav>
     <a href="poetry/">Poetry</a> |
     <a href="blog/">Blog</a>
   </nav>
-  <h1> Stopping by woods on a snowy evening </h1>
-  <div class="firstBlock">
-   Who's woods these are, I think I know,<br>
-   his house is in the village though,<br>
-   he will not see me stopping here,<br>
-   to watch these woods fill up with snow,<br>
-   <br>
-   my little horse must think it queer,<br>
-   to stop without a farmhouse near,<br>
-   between the woods and frozen lake,<br>
-   the darkest evening of the year,<br>
-   <br>
-   he gives his harness bells a shake,<br>
-   to ask if there is some mistake,<br>
-   the only other sound's the sweep,<br>
-   of easy wind and downy flake,<br>
-   <br>
-   These woods are lovely, dark, and deep,<br>
-   but I have promises to keep,<br>
-   and miles to go before I sleep,<br>
-   and miles to go before I sleep.<br>
-   <br>
+
+  <div>
+    <h1>Jacob Noble - Portfolio</h1>
+    <p>Welcome in!</p>
+    <p>This site is dedicated to my personal projects, resources that I find helpful, and thoughts I want to share.</p>
   </div>
-  <p>-Robert Frost</p>
-  <pre class="mermaid">
-    graph LR;
-        A-->B;
-        A-->C;
-        B-->D;
-        C-->D;
+
+  <div style="margin-left:2em;">
+    <!-- Links to poetry and blog pages -->
+    <ul>
+      <li><a href="poetry/">Poetry</a></li>
+      <li><a href="blog/">Blog</a></li>
+    </ul>
+  </div>
+  <div class="two-col">
+    <div class="col">
+      <pre class="mermaid">
+        graph LR;
+        subgraph sgcp [Career Path]
+          X([George Mason University]) --2019--> sggm;
+          subgraph sggm [General Motors]
+            direction TB
+            A(Data Analyst) --2020--> B(RPA Developer);
+            B --2024--> D(Systems Engineer);
+          end
+          
+        end
+
   </pre>
-  <form>
-    <label for="myq">pick a number between one and ten</label>
-    <input type="text" id="myq" name="myq" placeholder="hmmm...">
-    <input type="submit" value="submit" onclick="pressSubmit()">
+    </div>
+    <div class="col">
+      <h2>Career Summary</h2>
+      <p>B.S in Systems Engineering from George Mason University.</p>
+      <br>
+      <p>Supported VPxVIN application for General Motors Software & Services organization within Finance IT.</p>
+      <br>
+      <p>Owned KNIME Server instance, supporting all of finance IT.  Deployed and maintained Automation Anywhere RPA bots for all of finance IT.</p>
+      <br>
+      <p>Developed and deployed #1 fleet sales dashboard (Envolve Quantified Unique Insights for Profitability) for fleet Sales & Incentives tracking.</p>
+    </div>
+  </div>
+</body>
 
-  </form>
- </body>
 </html>
-<script>
-
-function pressSubmit() {
-  document.getElementById(myq)
-}
-
-</script>
