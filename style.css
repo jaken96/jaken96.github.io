@@ -230,3 +230,9 @@ li {
     unicode-bidi: isolate;
     list-style-type: disc;
 }
+
+/* ===== ensure image scales down but not up===== */
+img {
+  max-width: 100%;
+  height: auto;
+}

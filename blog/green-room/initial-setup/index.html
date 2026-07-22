@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="../../../style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Initial Setup | Green Room | Jaken96</title>
+</head>
+<body>
+    <nav>
+    <a href="https://jaken96.github.io/">Home</a>
+    <a href="https://jaken96.github.io/poetry/">Poetry</a>
+    <a href="https://jaken96.github.io/blog/">Blog</a>
+  </nav>
+  <main>
+    <section class="container">
+      <h1 class="firstBlock">Initial Setup</h1>
+      <p class="lead">It started with a box of old PC parts:</p>
+<ul>
+	<li>Z270 Gaming K4 Motherboard</li>
+	<li>2x8 GB DDR4 RAM @ 2133 MHz</li>
+	<li>Intel i5-6500 CPU @ 3.20 GHz</li>
+	<li>NZXT Kraken x72 CPU cooler AIO</li>
+	<li>EVGA SuperNOVA 750 G5 Power Supply</li>
+	<li>Radeon R9 390 8GB Graphics Card</li>
+</ul>
+That last item, the 390 with half as much RAM as the base machine, began to call out to me.
+<br>
+Of course it could never compete with the scale of modern cloud alternatives, but maybe it wouldn't have to?
+<br>
+Local LLM agents aren't new, but I had always balked at the idea of giving executive control to a bot on my primary desktop.
+<br>
+But what if it wasn't my primary desktop.  What if it was a box of parts cobbled together into something that POSTs.
+<br>
+Maybe, just maybe, I could set up this hardware to host a local model.  Nothing too impressive, but potentially something niche and functional.
+<br>
+I couldn't sleep.  New (to me) terms and phrases bounced around my head...
+<br>
+<pre>	Harness.  Quantization.  Huggingface.  </pre>
+
+What do they all mean?  Just how deep does this AI Iceberg go?</p>
+
+    </section>
+    <br>
+    <section class="container">
+        <h1 class="firstBlock">Plug and Play</h1>
+        <p class="lead">Pulling out all the techniques I'd learned from Lego Star Wars, I held the B button until the PC components flew around and assembled themselves automatically.</p>
+        <div class="tenor-gif-embed" data-postid="20034736" data-share-method="host" data-aspect-ratio="1.33333" data-width="100%"><a href="https://tenor.com/view/lego-gif-20034736">Lego GIF</a>from <a href="https://tenor.com/search/lego-gifs">Lego GIFs</a></div> <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+
+        CPU?  Click. <br>
+        RAM?  Clack. <br>
+        GPU?  Clickety clack. <br>
+        PSU?  Cli.. You get the idea. <br>
+        Before long, I had a fully decked out motherboard.  But no case.
+        In the spirit of good airflow (and not spending money), I strung up the motherboard using zip ties.
+        <img src="../../../img/green_room_windows.jpeg" alt="Green Room">
+        <br>
+        No case means no power button, but we can manually short the power-on pins using a screwdriver.<br>
+        I grabbed an old monitor and keyboard, said my prayers, and booted up the PC.<br>
+        To my astonishment, the system booted on the first try. <br>
+        Digging back into my parts box, I pulled out a 230 GB HDD that I'd had since 2014.<br>
+            Special thanks to my brother for giving me his old laptop so I could temple-of-doom the HDD out of that thang.
+        One SATA cable, one thumb drive, and one "I don't have a product key" later-  we got windows up and running.<br>
+        Running.. until it wasn't.<br>
+        I reseated and tested the RAM.  Replaced the CMOS battery.  Removed the GPU.<br>
+        The PC would boot and run for a while before randomly shutting down.<br>
+        At a loss, I began to mournfully look through my box of parts.<br>
+        Standoff screws, old thermal paste, SATA cables, power cables.  Nothing worth swapping out for A/B testing.<br>
+        Well, a little fresh thermal paste couldn't hurt.<br>
+        <br>
+        As I squished a pea-sized bead of paste against the CPU, I marveled at the simplicity of the NZXT Kraken.<br>
+
+        This cooler is so clean, it barely has any cables. Obviously it has power connections direct to the radiator fans, but that's it! ... <br>
+        <pre style="color: #f75a00; font-size: large;">
+        Hmm… I wonder how the water gets pumped 
+        through the radiator without any power cables...
+        </pre>
+        It was in that moment when I recalled a pair of cables that I had completely ignored during construction.<br>
+        A pair of cables that suspiciously aligned with a pair of ports I could see on the side of the Kraken.<br>
+        <img src="../../../img/NZXT_KRAKEN_COOLER.png" alt="Green Room">
+        <a href="https://www.search-manual.com/upload/nzxt-kraken-x52-all-in-one-liquid-cpu-cooler-with-am4-bracket-298034-user-manual.pdf" style="display:flex;text-align: center;justify-content: center;">Kraken install manual</a>
+        <br>
+        After installing the missing cords, a crazy thing happened:  The PC ran consistently without shutting down.<br>
+        With this newfound system stability, the hardware phase was done and we could move on to configuring software.<br>
+    </section>
+  </main>
+</body>
+</html>
