@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+  <meta charset="utf-8">
   <title>Jacob Noble - Portfolio</title>
-  <meta name=viewport content="width=device-width, initial-scale=1" , charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" type="text/css" href="./style.css">
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
@@ -12,30 +13,25 @@
 </head>
 
 <body>
-  <nav>
-    <a href="https://jaken96.github.io/">Home</a>
+  <nav aria-label="Primary navigation">
+    <a href="https://jaken96.github.io/" aria-current="page">Home</a>
     <a href="https://jaken96.github.io/poetry/">Poetry</a>
     <a href="https://jaken96.github.io/blog/">Blog</a>
   </nav>
 
-  <div>
+  <main>
     <h1>Jacob Noble - Portfolio</h1>
-    <p>Welcome in!</p>
-    <p>This site is dedicated to my personal projects, resources that I find helpful, and thoughts I want to share.</p>
-  </div>
+    <p class="lead">Welcome in! This site is dedicated to my personal projects, resources that I find helpful, and thoughts I want to share.</p>
 
-  <div style="margin-left:2em;">
     <!-- Links to poetry and blog pages -->
-    <ul>
+    <ul class="page-list">
       <li><a href="poetry/">Poetry</a></li>
       <li><a href="blog/">Blog</a></li>
     </ul>
-  </div>
-  <br>
-  <h2 style="text-align: center;">Career Summary</h2>
-  <div class="two-col">
-    <div class="leftcol">
-      <pre class="mermaid">
+    <h2>Career Summary</h2>
+    <div class="two-col">
+      <div class="leftcol">
+        <pre class="mermaid">
         graph LR;
         subgraph sgcp [Career Path]
           X([George Mason University]) --2019--> sggm;
@@ -45,20 +41,16 @@
             B --2024--> D(Systems Engineer);
           end
         end
-    </pre>
+        </pre>
+      </div>
+      <div class="rightcol">
+        <p>B.S. in Systems Engineering from George Mason University.</p>
+        <p>Supported the VPxVIN application for General Motors Software &amp; Services within Finance IT.</p>
+        <p>Owned the KNIME Server instance and deployed and maintained Automation Anywhere RPA bots for Finance IT.</p>
+        <p>Developed and deployed the #1 fleet sales dashboard, Envolve Quantified Unique Insights for Profitability, for fleet sales and incentives tracking.</p>
+      </div>
     </div>
-    <div class="rightcol">
-      
-      <p>B.S in Systems Engineering from George Mason University.</p>
-      <p>Supported VPxVIN application for General Motors 
-        Software & Services organization within Finance IT.</p>
-      <p>Owned KNIME Server instance, supporting all of finance IT.  
-        Deployed and maintained Automation Anywhere RPA bots for all of finance IT.</p>
-      <p>Developed and deployed #1 fleet sales dashboard 
-        (Envolve Quantified Unique Insights for Profitability) 
-        for fleet Sales & Incentives tracking.</p>
-    </div>
-  </div>
+  </main>
 </body>
 
 </html>
