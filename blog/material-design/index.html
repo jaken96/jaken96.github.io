@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A hands-on tour of Google Material Design, from digital paper in 2014 to Material 3 Expressive.">
+  <meta name="theme-color" content="#6750a4">
+  <title>Making the Web Material | Jaken96</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./material.css">
+</head>
+<body>
+  <a class="skip-link" href="#article">Skip to article</a>
+
+  <header class="top-app-bar">
+    <a class="brand" href="https://jaken96.github.io/" aria-label="Jaken96 home">
+      <span class="brand-mark" aria-hidden="true">J</span>
+      <span>Jaken96</span>
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="https://jaken96.github.io/">Home</a>
+      <a href="https://jaken96.github.io/poetry/">Poetry</a>
+      <a href="https://jaken96.github.io/blog/" aria-current="page">Blog</a>
+    </nav>
+  </header>
+
+  <main id="article">
+    <article>
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">DESIGN SYSTEMS · AUGUST 2026</p>
+          <h1>Making the Web <span>Material</span></h1>
+          <p class="dek">Google introduced Material Design in 2014 with a simple question: what if software behaved like something you could touch? Twelve years later, the paper has learned to stretch, spring, change color, and—apparently—develop a personality.</p>
+          <div class="hero-actions">
+            <a class="button filled" href="#the-paper-years">Start at 2014 <span aria-hidden="true">↓</span></a>
+            <button class="button tonal" id="surprise-theme" type="button">Surprise me</button>
+          </div>
+        </div>
+        <div class="hero-art" aria-label="An abstract stack of colorful material surfaces">
+          <div class="material-card card-back"></div>
+          <div class="material-card card-middle">
+            <span class="mini-pill"></span>
+            <span class="mini-line wide"></span>
+            <span class="mini-line"></span>
+          </div>
+          <div class="material-card card-front">
+            <span class="material-m">M</span>
+            <span class="floating-dot dot-one"></span>
+            <span class="floating-dot dot-two"></span>
+          </div>
+        </div>
+      </header>
+
+      <div class="reading-layout">
+        <aside class="contents" aria-label="On this page">
+          <p>ON THIS PAGE</p>
+          <a href="#the-paper-years">The paper years</a>
+          <a href="#material-you">Material You</a>
+          <a href="#expressive">Expressive</a>
+          <a href="#lab">Component lab</a>
+          <a href="#conclusion">Conclusion</a>
+        </aside>
+
+        <div class="article-body">
+          <section class="intro">
+            <p>I have been using Google products for most of my life. Search, Gmail, Android, Maps—if Google made a smart refrigerator tomorrow, there is a non-zero chance I would hand it my grocery list.</p>
+            <p>Despite this, I had never stopped to ask why all of those products feel related. They do not look identical, but they behave like cousins at a family reunion. They use the same gestures. They arrange information in familiar layers. They all seem to agree that a button should look very button-y.</p>
+            <p>The answer is Material Design: a shared design system made up of guidance, components, and tools. In this post, I will explore how it changed over time. More importantly, I will attempt to build the entire post using the latest version of the system. We are going full Material.</p>
+          </section>
+
+          <section id="the-paper-years">
+            <p class="section-kicker">01 · ORIGIN STORY</p>
+            <h2>The paper years</h2>
+            <p>Material Design debuted at Google I/O in 2014. Internally, it had been called “Quantum Paper,” which is both an excellent project name and a phrase I would expect to hear right before someone opens a portal.</p>
+            <p>The paper metaphor gave early Material a set of rules. Surfaces could stack, cast shadows, and move—but they could not pass through one another or ignore physics whenever it was convenient. A floating action button sat above the page because, visually, it was a separate piece of material.</p>
+
+            <figure class="comparison-card">
+              <figcaption>
+                <span>EXPLICIT EXAMPLE 01</span>
+                <strong>From digital paper to expressive surfaces</strong>
+              </figcaption>
+              <div class="comparison-grid">
+                <div class="era-demo paper-demo">
+                  <p class="demo-label">MATERIAL 1 · 2014</p>
+                  <div class="old-app-bar">INBOX</div>
+                  <div class="paper-row"><span></span><i></i></div>
+                  <div class="paper-row"><span></span><i></i></div>
+                  <button type="button" aria-label="Compose example">+</button>
+                  <p>Rigid grid, rectangular paper, obvious elevation.</p>
+                </div>
+                <div class="era-demo expressive-demo">
+                  <p class="demo-label">M3 EXPRESSIVE · NOW</p>
+                  <div class="new-app-bar">
+                    <span>Inbox</span>
+                    <i aria-hidden="true">⌕</i>
+                  </div>
+                  <div class="expressive-row"><span></span><i></i></div>
+                  <div class="expressive-row selected"><span></span><i></i></div>
+                  <button type="button">Compose <span aria-hidden="true">✦</span></button>
+                  <p>Contrasting shapes, clear containment, emphasized action.</p>
+                </div>
+              </div>
+            </figure>
+
+            <p>Material 2 arrived in 2018 and expanded the component system. It also made more room for brands to customize the base layer. Think of it as Google handing everyone the same box of LEGO bricks, then politely asking us not to glue a wheel to a sandwich.</p>
+          </section>
+
+          <section id="material-you">
+            <p class="section-kicker">02 · PERSONALIZATION</p>
+            <h2>Material becomes <em>you</em></h2>
+            <p>Material 3 launched in 2021 with Material You. Instead of choosing a static brand palette and calling it a day, Android could generate a coordinated color scheme from your wallpaper. Your phone still followed the rules, but the rules finally included you.</p>
+            <p>This page uses the same basic idea. Pick a seed color below and the surfaces, controls, outlines, and text colors update as a family. No individual color is working alone.</p>
+
+            <div class="color-lab demo-surface" aria-labelledby="palette-title">
+              <div class="demo-heading">
+                <div>
+                  <p class="demo-label">EXPLICIT EXAMPLE 02</p>
+                  <h3 id="palette-title">Dynamic color</h3>
+                </div>
+                <span class="status-pill" aria-live="polite" id="palette-status">Violet theme</span>
+              </div>
+              <div class="seed-picker" role="group" aria-label="Choose a seed color">
+                <button class="seed violet selected" type="button" data-theme="violet" aria-pressed="true"><span></span>Violet</button>
+                <button class="seed blue" type="button" data-theme="blue" aria-pressed="false"><span></span>Ocean</button>
+                <button class="seed green" type="button" data-theme="green" aria-pressed="false"><span></span>Fern</button>
+                <button class="seed orange" type="button" data-theme="orange" aria-pressed="false"><span></span>Ember</button>
+              </div>
+              <div class="tonal-palette" aria-hidden="true">
+                <span class="tone t1"></span>
+                <span class="tone t2"></span>
+                <span class="tone t3"></span>
+                <span class="tone t4"></span>
+                <span class="tone t5"></span>
+              </div>
+            </div>
+          </section>
+
+          <section id="expressive">
+            <p class="section-kicker">03 · EMOTION, ON PURPOSE</p>
+            <h2>Then things got Expressive</h2>
+            <p>Material 3 Expressive was announced in 2025 and continues to be Google’s current Material direction. Google expanded the system again at I/O 2026 with more adaptive components and a customizable motion-physics system. It builds on Material You with bolder type, contrasting shapes, vibrant color, and springy motion. The goal is not decoration for decoration’s sake. Size, shape, and containment tell your eyes what matters first.</p>
+
+            <blockquote>
+              <span aria-hidden="true">“</span>
+              <p>Expressive design makes you feel something. It inspires emotion, communicates function, and helps users achieve their goals.</p>
+              <cite>Google Design, <a href="https://design.google/library/expressive-material-design-google-research" target="_blank" rel="noopener">Better, Easier, Emotional UX</a></cite>
+            </blockquote>
+
+            <p>Google tested the system across 46 studies with more than 18,000 participants. In one email example, users found the larger, emphasized Send button four times faster than the small button in a conventional toolbar. This is a rare and beautiful alignment between “make the button enormous” and actual research.</p>
+
+            <div class="principle-grid">
+              <div class="principle shape-principle">
+                <span aria-hidden="true"></span>
+                <h3>Shape</h3>
+                <p>Contrasting corners and silhouettes create hierarchy without another divider line.</p>
+              </div>
+              <div class="principle scale-principle">
+                <span aria-hidden="true">Aa</span>
+                <h3>Scale</h3>
+                <p>Important actions get more room. Supporting actions know when to be quiet.</p>
+              </div>
+              <div class="principle motion-principle">
+                <span aria-hidden="true">→</span>
+                <h3>Motion</h3>
+                <p>Spring physics make a response feel natural while preserving cause and effect.</p>
+              </div>
+            </div>
+          </section>
+
+          <section id="lab">
+            <p class="section-kicker">04 · PLEASE TOUCH THE EXHIBITS</p>
+            <h2>Component lab</h2>
+            <p>Reading about an interface is a little like reading about a sandwich. At some point, you should probably interact with the thing.</p>
+
+            <div class="lab-grid">
+              <div class="demo-surface button-lab">
+                <div class="demo-heading">
+                  <div>
+                    <p class="demo-label">EXPLICIT EXAMPLE 03</p>
+                    <h3>Button group</h3>
+                  </div>
+                  <span class="component-icon" aria-hidden="true">✦</span>
+                </div>
+                <p>Choose a reading density. The selected control grows while its neighbors make room.</p>
+                <div class="button-group" role="group" aria-label="Reading density">
+                  <button type="button" data-density="Cozy">Cozy</button>
+                  <button class="active" type="button" data-density="Balanced" aria-pressed="true">Balanced</button>
+                  <button type="button" data-density="Compact">Compact</button>
+                </div>
+                <p class="demo-feedback" id="density-feedback" aria-live="polite">Balanced selected</p>
+              </div>
+
+              <div class="demo-surface progress-lab">
+                <div class="demo-heading">
+                  <div>
+                    <p class="demo-label">EXPLICIT EXAMPLE 04</p>
+                    <h3>Expressive progress</h3>
+                  </div>
+                  <span class="progress-value" id="progress-value">64%</span>
+                </div>
+                <div class="wave-progress" id="wave-progress" role="progressbar" aria-label="Example progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="64">
+                  <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                </div>
+                <button class="button tonal replay" id="replay-progress" type="button"><span aria-hidden="true">↻</span> Replay</button>
+              </div>
+            </div>
+          </section>
+
+          <section id="conclusion">
+            <p class="section-kicker">05 · CONCLUSION</p>
+            <h2>It is still paper. Kind of.</h2>
+            <p>Material Design started by giving software a physical metaphor. Paper established where things lived, shadows explained which surface was on top, and motion showed how one state became another.</p>
+            <p>The latest system keeps that clarity, but loosens the tie. Material can now be pill-shaped, flower-shaped, loud, calm, springy, or personalized from a single color. The important part is not the exact corner radius. It is that every visual choice helps communicate what the interface wants you to notice or do.</p>
+            <p>Did this article need a wavy progress indicator? No. Did I enjoy making one? Absolutely. Expressive can still be functional, but functional is finally allowed to have a little fun.</p>
+
+            <div class="source-card">
+              <div>
+                <p class="demo-label">CONTINUE EXPLORING</p>
+                <h3>Primary sources</h3>
+              </div>
+              <ul>
+                <li><a href="https://design.google/library/material-design-eras" target="_blank" rel="noopener">Material Eras: the first ten years</a></li>
+                <li><a href="https://m3.material.io/" target="_blank" rel="noopener">Material 3 design system</a></li>
+                <li><a href="https://design.google/library/expressive-material-design-google-research" target="_blank" rel="noopener">The research behind M3 Expressive</a></li>
+              </ul>
+            </div>
+          </section>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <footer>
+    <p>Designed, written, and over-rounded by Jacob Noble.</p>
+    <a href="https://jaken96.github.io/blog/">More from the blog <span aria-hidden="true">→</span></a>
+  </footer>
+
+  <button class="floating-action" id="back-to-top" type="button" aria-label="Back to top">
+    <span aria-hidden="true">↑</span>
+  </button>
+
+  <script src="./material.js"></script>
+</body>
+</html>
