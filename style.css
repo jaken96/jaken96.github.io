@@ -283,6 +283,61 @@ img {
     background: var(--accent-hover);
 }
 
+.project-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1.5rem 0 2.5rem;
+}
+
+.post-label {
+    margin-bottom: 0.55rem;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.game-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.game-heading h2,
+.game-heading p {
+    margin: 0;
+}
+
+.game-heading p {
+    color: var(--text-muted);
+}
+
+.game-frame-shell {
+    overflow: hidden;
+    background: #07101f;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.game-frame {
+    display: block;
+    width: 100%;
+    height: clamp(42rem, 80vh, 50rem);
+    border: 0;
+}
+
+.game-note {
+    margin-top: 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
 input,
 textarea {
     width: 100%;
@@ -341,5 +396,17 @@ pre:not(.mermaid) {
 
     .stanza {
         font-size: 0.94rem;
+    }
+
+    .game-heading {
+        display: block;
+    }
+
+    .game-heading .btn {
+        margin-top: 1rem;
+    }
+
+    .game-frame {
+        height: 46rem;
     }
 }

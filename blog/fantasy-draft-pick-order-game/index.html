@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Play a Disney and NFL trivia game that determines an eight-player fantasy football draft order.">
+  <title>Fantasy Draft Pick Order Game | Jaken96</title>
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+  <nav aria-label="Primary navigation">
+    <a href="https://jaken96.github.io/">Home</a>
+    <a href="https://jaken96.github.io/poetry/">Poetry</a>
+    <a href="https://jaken96.github.io/blog/" aria-current="page">Blog</a>
+  </nav>
+
+  <main>
+    <article>
+      <header>
+        <p class="post-label">Project spotlight</p>
+        <h1>Fantasy Draft Pick Order Game</h1>
+        <p class="lead">
+          A host-led trivia game that turns fantasy football draft-order selection
+          into part of draft night. Eight players race through Disney and NFL
+          questions to claim their picks.
+        </p>
+        <div class="project-actions">
+          <a class="btn" href="https://github.com/jaken96/fantasy-draft-pick-order-game" target="_blank" rel="noopener noreferrer">View the project on GitHub</a>
+        </div>
+      </header>
+
+      <section aria-labelledby="play-game">
+        <div class="game-heading">
+          <div>
+            <h2 id="play-game">Play the game</h2>
+            <p>Choose a category, read the question, and reveal the answer when everyone has buzzed in.</p>
+          </div>
+          <a class="btn" href="./game/index.html" target="_blank" rel="noopener">Open full screen</a>
+        </div>
+
+        <div class="game-frame-shell">
+          <iframe
+            class="game-frame"
+            src="./game/index.html"
+            title="Fantasy Draft Pick Order Game"
+            loading="eager"
+          >
+            <p><a href="./game/index.html">Open the fantasy draft pick order game.</a></p>
+          </iframe>
+        </div>
+        <p class="game-note">The question history stays in this browser tab and no player data is sent anywhere.</p>
+      </section>
+
+      <section aria-labelledby="how-it-works">
+        <h2 id="how-it-works">How it works</h2>
+        <p>
+          A host reads one question at a time. The first player to buzz in with
+          the correct answer earns one point. When someone reaches the round's
+          target, they claim the next available draft position and leave the round.
+        </p>
+        <ul>
+          <li>Picks 1–3 require 3 points each.</li>
+          <li>Picks 4–6 require 2 points each.</li>
+          <li>Pick 7 requires 1 point.</li>
+          <li>The final remaining player receives pick 8.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="under-the-hood">
+        <h2 id="under-the-hood">Under the hood</h2>
+        <p>
+          The game is built with plain HTML, CSS, and JavaScript. It ships with
+          255 curated questions—100 Disney questions and 155 NFL questions—and
+          avoids repeating a question until its category has been exhausted in
+          the current tab.
+        </p>
+      </section>
+    </article>
+  </main>
+</body>
+</html>

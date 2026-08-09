@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Random Disney trivia questions for draft night.">
+    <title>Disney Trivia | Draft Night</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="trivia.js" defer></script>
+  </head>
+  <body
+    class="trivia-page disney-theme"
+    data-topic="disney"
+    data-source="data/questions/disney-trivia.json"
+  >
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="Return to the landing page">
+        <span class="brand-mark" aria-hidden="true">★</span>
+        <span>Draft Night Trivia</span>
+      </a>
+
+      <nav class="category-nav" aria-label="Trivia categories">
+        <a class="nav-button active" href="disney.html" aria-current="page">
+          Disney
+        </a>
+        <a class="nav-button" href="nfl.html">NFL</a>
+      </nav>
+    </header>
+
+    <main class="question-layout">
+      <section class="question-card" aria-labelledby="question-text">
+        <div class="question-topline">
+          <span class="category-badge">Disney</span>
+          <span id="difficulty" class="difficulty">Loading</span>
+        </div>
+
+        <div class="question-number">
+          Question <span id="question-count">1</span>
+        </div>
+        <h1 id="question-text" aria-live="polite">Loading a Disney question…</h1>
+
+        <div id="answer-panel" class="answer-panel" hidden>
+          <span class="answer-label">Answer</span>
+          <strong id="answer-text"></strong>
+        </div>
+
+        <p id="error-message" class="error-message" role="alert" hidden></p>
+
+        <div class="question-actions">
+          <button id="show-answer" class="button button-secondary" type="button">
+            Show Answer
+          </button>
+          <button id="next-question" class="button button-primary" type="button">
+            Next Question
+            <span aria-hidden="true">→</span>
+          </button>
+        </div>
+      </section>
+
+      <aside class="round-card" aria-label="Category navigation">
+        <p class="aside-label">Switch category</p>
+        <h2>Keep the round moving</h2>
+        <p>Jump between question banks whenever you want.</p>
+        <a class="switch-card disney-switch active" href="disney.html">
+          <span aria-hidden="true">★</span>
+          <span><strong>Disney</strong><small>100 questions</small></span>
+        </a>
+        <a class="switch-card nfl-switch" href="nfl.html">
+          <span aria-hidden="true">◆</span>
+          <span><strong>NFL</strong><small>155 questions</small></span>
+        </a>
+      </aside>
+    </main>
+  </body>
+</html>
