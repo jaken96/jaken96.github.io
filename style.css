@@ -338,6 +338,22 @@ img {
     font-size: 0.9rem;
 }
 
+.draft-position-figure {
+    margin: 1.5rem 0 0;
+}
+
+.draft-position-figure img {
+    width: 100%;
+    margin: 0;
+}
+
+.draft-position-figure figcaption {
+    margin-top: 0.65rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
 input,
 textarea {
     width: 100%;
