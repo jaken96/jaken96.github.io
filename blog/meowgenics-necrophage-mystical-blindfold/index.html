@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A Meowgenics item interaction that turns a Necrophage cleric from corpse-eating liability into a functional healer.">
+  <title>Meowgenics: Necrophage + Mystical Blindfold | Jaken96</title>
+  <link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+  <nav aria-label="Primary navigation">
+    <a href="https://jaken96.github.io/">Home</a>
+    <a href="https://jaken96.github.io/poetry/">Poetry</a>
+    <a href="https://jaken96.github.io/blog/" aria-current="page">Blog</a>
+  </nav>
+
+  <main>
+    <article class="blog-post">
+      <header>
+        <p class="post-label">Game notes</p>
+        <h1>Meowgenics: Necrophage + Mystical Blindfold</h1>
+        <p class="lead">
+          My cleric had one job: keep the party alive. Unfortunately, he also had
+          an uncontrollable appetite for the bodies he was supposed to revive.
+          Fixing him took a blindfold, a bent spoon, and a lesson in effect priority.
+        </p>
+        <p class="post-meta"><time datetime="2026-08-09">August 9, 2026</time> · Jacob Noble</p>
+      </header>
+
+      <section aria-labelledby="outing-heading">
+        <h2 id="outing-heading">A perfectly normal cat outing</h2>
+        <p>
+          <em>Meowgenics</em> is a cat-themed roguelike with a wonderfully vile art
+          direction. You run a cat-lady household, breed increasingly strange
+          felines, and send four of them on turn-based outings to collect food.
+          Each cat can pick up class abilities, mutations, disorders, and other
+          traits that pull a build in unexpected directions.
+        </p>
+        <p>My party for this trip through the Boneyard was:</p>
+        <ul class="cat-roster">
+          <li><strong>Syrus</strong><span>Green · Hunter</span></li>
+          <li><strong>Barsik</strong><span>White · Cleric</span></li>
+          <li><strong>Methos</strong><span>Brown · Druid</span></li>
+          <li><strong>Jack Buckskin</strong><span>Red · Fighter</span></li>
+        </ul>
+        <figure class="post-figure post-figure-wide">
+          <img
+            src="./assets/boneyard-map.jpg"
+            alt="The four-cat party gathered on the Boneyard outing map in Meowgenics."
+            width="1800"
+            height="1013"
+          >
+          <figcaption>The party enters the Boneyard. Barsik, my white cleric, is second in the lineup.</figcaption>
+        </figure>
+      </section>
+
+      <section aria-labelledby="necrophage-heading">
+        <h2 id="necrophage-heading">The problem: my cleric ate the patients</h2>
+        <p>
+          Barsik had the <strong>Necrophage</strong> disorder. At the start of his
+          turn, a nearby dead body would make him move toward it, eat it, gain
+          All Stats Up, and heal four HP.
+        </p>
+        <figure class="post-figure post-figure-compact">
+          <img
+            src="./assets/necrophage-disorder.jpg"
+            alt="Necrophage disorder tooltip: At the start of your turn, if there is a dead body near you, move towards it and eat it to gain All Stats Up and heal 4 HP."
+            width="1200"
+            height="382"
+            loading="lazy"
+          >
+          <figcaption>Useful on paper. Less useful on the cat responsible for reviving dead bodies.</figcaption>
+        </figure>
+        <p class="aside-quote">
+          So the cat responsible for reviving and healing the dead bodies sprinted
+          toward them and ate them. Great.
+        </p>
+        <p>
+          Necrophage might be a solid survival tool on another class, but it made
+          Barsik all but useless as a cleric. Every corpse he consumed was one less
+          party member he could bring back.
+        </p>
+      </section>
+
+      <section aria-labelledby="blindfold-heading">
+        <h2 id="blindfold-heading">The first fix fixed too much</h2>
+        <p>
+          Then the universe corrected itself. I found a <strong>Mystical
+          Blindfold</strong>, an item that makes physical attacks and abilities
+          always miss. Eating a body certainly sounded physical, so I equipped it
+          and tested the interaction.
+        </p>
+        <figure class="post-figure post-figure-compact">
+          <img
+            src="./assets/mystical-blindfold.jpg"
+            alt="Mystical Blindfold tooltip: Your physical attacks and abilities always miss."
+            width="1200"
+            height="495"
+            loading="lazy"
+          >
+          <figcaption>The blindfold stopped Necrophage from consuming a body.</figcaption>
+        </figure>
+        <p>
+          It worked. The game treated Necrophage as a physical ability, so Barsik
+          could no longer eat the party's casualties. There was only one problem:
+          the blindfold was equally committed to making his physical healing attack
+          miss. I had saved the patients from Barsik, but not yet made him capable
+          of helping them.
+        </p>
+        <figure class="post-figure post-figure-action">
+          <video controls muted loop playsinline preload="metadata" aria-label="Barsik's physical action missing while the Mystical Blindfold is equipped.">
+            <source src="./assets/Meogenics_Mystical_Blindfold_Miss.mp4" type="video/mp4">
+            <p>Your browser cannot play this video. <a href="./assets/Meogenics_Mystical_Blindfold_Miss.mp4">Download the Blindfold miss clip</a>.</p>
+          </video>
+          <figcaption>The blindfold did exactly what it promised: every physical attempt whiffed.</figcaption>
+        </figure>
+      </section>
+
+      <section aria-labelledby="spoon-heading">
+        <h2 id="spoon-heading">Enter the Bent Spoon</h2>
+        <p>
+          One more item put a finger on the scale of justice. Well, not a finger:
+          a <strong>Bent Spoon</strong>. Its Spoon Bender effect says that the
+          wearer's basic attack cannot miss and emits a Sparkle when used.
+        </p>
+        <figure class="post-figure post-figure-compact">
+          <img
+            src="./assets/spoon-bender.jpg"
+            alt="Spoon Bender tooltip: Your basic attack cannot miss and emits a Sparkle when used."
+            width="1600"
+            height="338"
+            loading="lazy"
+          >
+          <figcaption>Now the question was simple: which item effect would take priority?</figcaption>
+        </figure>
+        <p>
+          The positive effect won. Spoon Bender overrode the blindfold for Barsik's
+          basic attack, allowing it to connect again. The blindfold still blocked
+          the Necrophage behavior because the spoon only protects the basic attack,
+          not every physical ability.
+        </p>
+        <figure class="post-figure post-figure-action">
+          <video controls muted loop playsinline preload="metadata" aria-label="Barsik's basic attack connecting after Spoon Bender overrides the Mystical Blindfold.">
+            <source src="./assets/Meogenics_Mystical_Blindfold_Hit.mp4" type="video/mp4">
+            <p>Your browser cannot play this video. <a href="./assets/Meogenics_Mystical_Blindfold_Hit.mp4">Download the Spoon Bender hit clip</a>.</p>
+          </video>
+          <figcaption>Spoon Bender wins the priority check, allowing Barsik's basic attack to connect.</figcaption>
+        </figure>
+
+        <div class="interaction-summary" aria-labelledby="result-heading">
+          <h3 id="result-heading">The final interaction</h3>
+          <ol>
+            <li><strong>Necrophage</strong> tries to move Barsik toward a corpse and eat it.</li>
+            <li><strong>Mystical Blindfold</strong> makes that physical ability miss.</li>
+            <li><strong>Spoon Bender</strong> separately guarantees that Barsik's basic attack hits.</li>
+          </ol>
+        </div>
+      </section>
+
+      <section aria-labelledby="takeaway-heading">
+        <h2 id="takeaway-heading">A very Meowgenics solution</h2>
+        <p>
+          The result is delightfully specific: Barsik cannot eat bodies, but he can
+          use his basic attack again. Clerics can also pick up plenty of non-physical
+          abilities, so the blindfold's downside is manageable beyond that one
+          rescued action.
+        </p>
+        <p>
+          It is the kind of emergent fix that makes a systems-heavy roguelike so
+          satisfying. A disorder ruined a class role, one item suppressed the
+          disorder, and another item carved out the exact exception the build
+          needed. The healer is back in business—and the corpses are finally safe.
+        </p>
+      </section>
+    </article>
+  </main>
+</body>
+</html>
