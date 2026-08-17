@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="../../../style.css?v=20260817">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A practical map of CPU, RAM, GPU, VRAM, storage, software, and the bottlenecks that shape local LLM inference.">
+  <title>The Hardware Map: What Runs a Local LLM? | Green Room | Jaken96</title>
+</head>
+<body>
+  <nav aria-label="Primary navigation">
+    <a href="https://jaken96.github.io/">Home</a>
+    <a href="https://jaken96.github.io/poetry/">Poetry</a>
+    <a href="https://jaken96.github.io/blog/" aria-current="page">Blog</a>
+  </nav>
+
+  <main class="blog-post hardware-article">
+    <article class="container">
+      <header>
+        <p class="post-label">The Green Room · Hardware</p>
+        <h1 class="firstBlock">The Hardware Map: What Runs a Local LLM?</h1>
+        <p class="card">Writing the <a href="../initial-setup/index.html">Initial Setup blog post</a> opened my eyes to how little I know about LLM hardware configuration.
+        I created this post to document my research into various configurations as we continue to develop the green room into something useful. Full disclosure: Codex heavily assisted the creation of this post.</p>
+        <p class="lead">A local model does not run on “the GPU.” It runs through a chain of storage, memory, processors, buses, drivers, and cooling. The slowest useful link sets the pace.</p>
+        <p class="post-meta">Research checked August 14, 2026 · Inference first, with a short training contrast</p>
+      </header>
+
+      <section aria-labelledby="three-limits">
+        <h2 id="three-limits">Start with three limits</h2>
+        <p>Local LLM hardware gets easier to understand when I ask three questions in order.</p>
+        <div class="limit-grid">
+          <div class="limit-card">
+            <h3>1. Capacity</h3>
+            <p>Can the model weights, key-value cache, compute buffers, and runtime headroom fit in the memory that will hold them?</p>
+          </div>
+          <div class="limit-card">
+            <h3>2. Bandwidth</h3>
+            <p>Can that memory feed the active processor fast enough? A large memory pool can still be slow.</p>
+          </div>
+          <div class="limit-card">
+            <h3>3. Compute</h3>
+            <p>Can the CPU or GPU perform the required math quickly, and does the software have efficient kernels for that hardware?</p>
+          </div>
+        </div>
+        <p>Capacity is a gate. If the workload does not fit, it will fail or spill into slower memory. Bandwidth and compute decide how fast it runs after it fits. Software decides how much of the hardware I can use.</p>
+      </section>
+
+      <section aria-labelledby="phases">
+        <h2 id="phases">The bottleneck changes during one request</h2>
+        <p>An inference request has distinct phases. A machine can be quick in one phase and miserable in the next.</p>
+        <div class="table-scroll" tabindex="0" aria-label="Inference phases and their common bottlenecks">
+          <table class="hardware-table">
+            <thead>
+              <tr>
+                <th>Phase</th>
+                <th>What happens</th>
+                <th>Common limit</th>
+                <th>What improves it</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Load</th>
+                <td>Weights move from storage into RAM and, for GPU work, into VRAM.</td>
+                <td>Storage speed, free RAM, and host-to-GPU transfer speed.</td>
+                <td>An SSD, enough memory, and fewer cold starts.</td>
+              </tr>
+              <tr>
+                <th scope="row">Prompt processing</th>
+                <td>The model processes known input tokens in parallel. This is also called <em>prefill</em>.</td>
+                <td>Compute throughput and kernel efficiency often matter most.</td>
+                <td>Stronger accelerator compute, larger useful batches, and efficient kernels.</td>
+              </tr>
+              <tr>
+                <th scope="row">Token generation</th>
+                <td>The model generates one token, then repeats with the new token included.</td>
+                <td>Memory bandwidth often dominates at small interactive batches.</td>
+                <td>Fast active memory and a backend that keeps transfers low.</td>
+              </tr>
+              <tr>
+                <th scope="row">Long or concurrent work</th>
+                <td>The runtime retains attention state for more tokens and more sequences.</td>
+                <td>KV-cache capacity, memory bandwidth, and allocation strategy.</td>
+                <td>Shorter contexts, fewer parallel sequences, smaller cache types, or more memory.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>NVIDIA describes prefill as a highly parallel matrix-matrix operation. It describes decode as a sequential matrix-vector operation where memory movement often dominates latency <a class="inline-citation" href="#source-nvidia">[NVIDIA, 2023; accessed 2026-08-14]</a>. “GPU utilization” alone therefore tells only part of the story.</p>
+      </section>
+
+      <section aria-labelledby="hardware-map-title">
+        <h2 id="hardware-map-title">The hardware dependency map</h2>
+        <p>Choose a placement mode. The map shows where the weights, KV cache, and working buffers live. It also shows the path that data must cross.</p>
+
+        <div class="map-controls" role="group" aria-label="Inference placement mode">
+          <button type="button" class="map-button" data-map-mode="overview" aria-pressed="true">Overview</button>
+          <button type="button" class="map-button" data-map-mode="cpu" aria-pressed="false">CPU only</button>
+          <button type="button" class="map-button" data-map-mode="gpu" aria-pressed="false">Single GPU</button>
+          <button type="button" class="map-button" data-map-mode="hybrid" aria-pressed="false">Hybrid CPU/GPU</button>
+          <button type="button" class="map-button" data-map-mode="kv-offload" aria-pressed="false">KV-cache offload</button>
+          <button type="button" class="map-button" data-map-mode="multi-gpu" aria-pressed="false">Multi-GPU</button>
+          <button type="button" class="map-button" data-map-mode="unified" aria-pressed="false">Unified memory</button>
+        </div>
+
+        <figure class="hardware-map-figure">
+          <button type="button" id="hardware-map-diagram" class="hardware-map-diagram" aria-haspopup="dialog" aria-controls="hardware-map-dialog" aria-expanded="false" aria-label="Open overview of local LLM hardware dependencies in a full-screen view">
+            <span class="diagram-status">Loading the hardware map. The text map and tables below contain the same information.</span>
+          </button>
+          <figcaption id="map-live" class="map-summary" aria-live="polite">
+            <span><strong>Placement:</strong> <span id="map-placement">Weights and cache can live in RAM, VRAM, or both.</span></span>
+            <span><strong>Likely bottleneck:</strong> <span id="map-bottleneck">The slowest capacity, bandwidth, compute, transfer, or software limit.</span></span>
+          </figcaption>
+        </figure>
+
+        <dialog id="hardware-map-dialog" class="hardware-map-dialog" aria-labelledby="hardware-map-dialog-title">
+          <div class="hardware-map-dialog-shell">
+            <header class="hardware-map-dialog-header">
+              <h2 id="hardware-map-dialog-title">Hardware dependency map</h2>
+              <button type="button" id="hardware-map-close" class="hardware-map-close" aria-label="Close full-screen hardware map">×</button>
+            </header>
+            <div id="hardware-map-expanded" class="hardware-map-expanded" role="img" aria-label="Expanded hardware dependency map">
+              <p class="diagram-status">Loading the full-screen map.</p>
+            </div>
+            <div class="map-summary hardware-map-dialog-summary" aria-live="polite">
+              <span><strong>Placement:</strong> <span id="expanded-map-placement">Weights and cache can live in RAM, VRAM, or both.</span></span>
+              <span><strong>Likely bottleneck:</strong> <span id="expanded-map-bottleneck">The slowest capacity, bandwidth, compute, transfer, or software limit.</span></span>
+            </div>
+          </div>
+        </dialog>
+
+        <noscript>
+          <p class="aside-quote">The interactive map needs JavaScript. The text map and comparison table below cover every mode.</p>
+        </noscript>
+
+        <div class="text-map" aria-labelledby="text-map-title">
+          <h3 id="text-map-title">Text version of the map</h3>
+          <ol>
+            <li><strong>Storage</strong> holds the model file. It feeds <strong>RAM</strong> when the model loads.</li>
+            <li><strong>RAM</strong> holds CPU weights, CPU-side KV cache, working data, and staged data for a discrete GPU.</li>
+            <li><strong>The CPU</strong> runs CPU layers. It also handles setup, tokenization, sampling, and orchestration around GPU work.</li>
+            <li><strong>PCIe and motherboard topology</strong> connect system memory to discrete GPUs. Hybrid and multi-GPU modes depend on this transfer path.</li>
+            <li><strong>VRAM</strong> holds GPU-resident weights, KV cache, and compute buffers. <strong>GPU cores</strong> operate on that data.</li>
+            <li><strong>The software backend</strong> supplies the kernels and device support. Weak support can waste strong hardware or block it outright.</li>
+            <li><strong>Power and cooling</strong> let processors sustain clocks. Heat or power limits can reduce speed during long runs.</li>
+          </ol>
+        </div>
+
+        <div class="table-scroll" tabindex="0" aria-label="Hardware bottleneck matrix">
+          <table class="hardware-table bottleneck-table">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>It depends on</th>
+                <th>It can bottleneck</th>
+                <th>Typical symptom</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">CPU</th><td>RAM bandwidth, instruction support, thread scheduling</td><td>CPU layers, tokenization, prompt processing</td><td>Low CPU-only speed or a hybrid run that stalls between GPU work</td></tr>
+              <tr><th scope="row">RAM</th><td>Memory channels, clock, CPU memory controller</td><td>Model capacity and CPU decode speed</td><td>Paging, failure to load, or low tokens per second despite free CPU cycles</td></tr>
+              <tr><th scope="row">GPU</th><td>Backend, kernels, VRAM, power, cooling</td><td>Prompt processing and GPU-resident layers</td><td>Slow prefill or low utilization caused by unsupported operations</td></tr>
+              <tr><th scope="row">VRAM</th><td>GPU memory bus and capacity</td><td>Model fit, KV cache, GPU decode speed</td><td>Out-of-memory errors or forced CPU offload</td></tr>
+              <tr><th scope="row">PCIe</th><td>CPU lanes, chipset, slot wiring</td><td>Hybrid transfers and multi-GPU communication</td><td>Adding a GPU gives little gain or makes latency worse</td></tr>
+              <tr><th scope="row">Storage</th><td>Drive and interface</td><td>Load time and paging</td><td>Long startup; pauses when memory spills to disk</td></tr>
+              <tr><th scope="row">Software</th><td>Driver, backend, model format, kernels</td><td>Every phase</td><td>Fallback to CPU, missing operations, crashes, or poor hardware use</td></tr>
+              <tr><th scope="row">Power and cooling</th><td>PSU rails, airflow, cooler contact, room temperature</td><td>Sustained clocks and stability</td><td>Speed falls over time, throttling, resets, or errors</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="memory-math">
+        <h2 id="memory-math">Size the workload before buying hardware</h2>
+        <p>Three estimates catch most capacity problems. They are planning tools, not promises. Model formats add metadata. Some tensors stay at higher precision. Runtimes also reserve temporary buffers.</p>
+        <div class="formula-list">
+          <div class="formula-block">
+            <h3>Weight memory</h3>
+            <code>parameters × bits per weight ÷ 8</code>
+            <p>An 8-billion-parameter model at a perfect 4 bits per weight would need 4 GB, or about 3.73 GiB, for raw weights. A real Q4 file is larger because “Q4” is not a perfect four-bit package. For example, llama.cpp lists a 4.9 GB Q4_K_M file for one Llama 3.1 8B example <a class="inline-citation" href="#source-quantize">[llama.cpp quantization guide, accessed 2026-08-14]</a>.</p>
+          </div>
+          <div class="formula-block">
+            <h3>KV-cache memory</h3>
+            <code>tokens × layers × 2 × KV heads × head size × bytes per element × concurrent sequences</code>
+            <p>The factor of two covers keys and values. A hypothetical 32-layer model with 8 KV heads, a head size of 128, FP16 cache values, 4,096 tokens, and one sequence needs 536,870,912 bytes: 512 MiB. Four concurrent sequences need about 2 GiB. Models with full multi-head attention can need much more. Grouped-query and multi-query attention reduce the number of KV heads <a class="inline-citation" href="#source-nvidia">[NVIDIA, 2023; accessed 2026-08-14]</a>.</p>
+          </div>
+          <div class="formula-block">
+            <h3>Total working memory</h3>
+            <code>weights + KV cache + compute buffers + runtime headroom</code>
+            <p>Leave room for the operating system, display use, the backend, and temporary allocations. A model file that is smaller than VRAM can still fail to load.</p>
+          </div>
+        </div>
+        <p><strong>GB is not GiB.</strong> One decimal gigabyte is 1,000,000,000 bytes. One binary gibibyte is 1,073,741,824 bytes <a class="inline-citation" href="#source-nist">[NIST binary-prefix reference, accessed 2026-08-14]</a>. Also separate a vendor’s theoretical bandwidth from achieved bandwidth. Real kernels lose time to access patterns, overhead, synchronization, and unsupported operations.</p>
+      </section>
+
+      <section aria-labelledby="execution-modes">
+        <h2 id="execution-modes">Execution modes and their tradeoffs</h2>
+        <div class="table-scroll" tabindex="0" aria-label="Local LLM execution mode comparison">
+          <table class="hardware-table mode-table">
+            <thead>
+              <tr>
+                <th>Mode</th>
+                <th>Placement</th>
+                <th>Strength</th>
+                <th>Common failure</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">CPU only</th><td>Weights and cache in RAM; math on CPU</td><td>Broad compatibility and access to system RAM</td><td>RAM bandwidth limits generation; older CPUs process prompts slowly</td></tr>
+              <tr><th scope="row">Single GPU</th><td>Weights, cache, and buffers in VRAM</td><td>Low transfer overhead and usually the best interactive latency</td><td>VRAM capacity ends the party early</td></tr>
+              <tr><th scope="row">Partial layer offload</th><td>Some layers in VRAM; the rest in RAM</td><td>Uses a small GPU without giving up a larger model</td><td>CPU layers and handoffs cap the whole run</td></tr>
+              <tr><th scope="row">KV-cache offload</th><td>Weights in VRAM; most cache in RAM</td><td>Frees VRAM for weights or longer context</td><td>Repeated cache transfers reduce generation throughput</td></tr>
+              <tr><th scope="row">Layer or pipeline split</th><td>Contiguous layer groups on different GPUs</td><td>Adds VRAM with less communication than tensor splitting</td><td>Tokens pass through devices in sequence; uneven GPUs can leave one waiting</td></tr>
+              <tr><th scope="row">Tensor parallel</th><td>Each layer’s tensors split across GPUs</td><td>Devices work on the same layer at once</td><td>Frequent synchronization makes interconnect speed critical</td></tr>
+              <tr><th scope="row">Data parallel</th><td>A full model copy on each GPU</td><td>Processes independent request batches for higher throughput</td><td>Does not make one model fit; each GPU needs its own copy</td></tr>
+              <tr><th scope="row">Unified memory</th><td>CPU and GPU share one physical pool</td><td>Removes the discrete RAM-to-VRAM copy boundary</td><td>CPU, GPU, and system still share capacity and bandwidth</td></tr>
+              <tr><th scope="row">Disk or multi-node</th><td>Layers spill to storage or cross a network</td><td>Runs a model beyond one machine’s memory</td><td>Storage or network latency can make interactive use impractical</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>CPU only</h3>
+        <p>CPU inference is the simple baseline. The model sits in system RAM. The CPU reads each layer’s weights and performs the math. Quantized GGUF models make this practical on ordinary machines because they cut both capacity needs and memory traffic. Quantization can also reduce quality, so smaller is not automatically better <a class="inline-citation" href="#source-quantize">[llama.cpp quantization guide, accessed 2026-08-14]</a>.</p>
+        <p>Generation often streams much of the model for each token. That makes RAM bandwidth a hard ceiling. More CPU cores help only until they compete for the same memory channels. Prompt processing can still benefit from compute and vector instructions.</p>
+
+        <h3>One GPU, with or without help from the CPU</h3>
+        <p>Full offload keeps the active model in VRAM and avoids repeated PCIe crossings. This is usually the cleanest path for one interactive user. If the model does not fit, a runtime such as llama.cpp can place only some layers on the GPU. That can beat CPU-only inference, but every token must still traverse the CPU layers. The slow section controls the lap time.</p>
+        <p>KV-cache offload solves a different capacity problem. Hugging Face can keep the current layer’s cache on the GPU while it moves other layer caches to the CPU. This saves VRAM but adds transfer work and can reduce generation throughput <a class="inline-citation" href="#source-hf-kv">[Hugging Face KV-cache guide, accessed 2026-08-14]</a>.</p>
+
+        <h3>Several GPUs: three different jobs</h3>
+        <p>“Multi-GPU” does not describe one design. A layer split places contiguous layers on different GPUs. It mainly joins their capacity. Tensor parallelism splits work inside each layer, so GPUs must exchange partial results often. Data parallelism copies the full model to each GPU and sends each copy independent requests.</p>
+        <p>Current llama.cpp documentation calls its layer split the default and most compatible choice. It calls tensor splitting experimental and warns that interconnect speed matters much more. It also notes that multi-GPU can run slower than one GPU when communication becomes the bottleneck <a class="inline-citation" href="#source-multi-gpu">[llama.cpp multi-GPU guide, accessed 2026-08-14]</a>. vLLM defines data-parallel deployment as replicated model instances that process independent request batches <a class="inline-citation" href="#source-vllm">[vLLM data-parallel guide, accessed 2026-08-14]</a>.</p>
+
+        <h3>Unified memory, disk, and another machine</h3>
+        <p>A unified-memory system removes the separate RAM and VRAM pools. Apple’s MLX documentation states that the CPU and GPU have direct access to the same memory pool, so an array does not need a device-to-device copy before either processor uses it <a class="inline-citation" href="#source-mlx">[MLX unified-memory guide, accessed 2026-08-14]</a>. That simplifies placement. It does not create infinite capacity or bandwidth.</p>
+        <p>Disk offload extends capacity again, but each needed layer must travel from disk to RAM and then to the accelerator. Hugging Face calls hard-drive placement the slowest automatic option and notes the transfer overhead <a class="inline-citation" href="#source-accelerate">[Hugging Face Accelerate guide, accessed 2026-08-14]</a>. A second machine replaces disk latency with network latency and distributed coordination. Both are capacity tools before they are speed tools.</p>
+      </section>
+
+      <section aria-labelledby="bottleneck-shifters">
+        <h2 id="bottleneck-shifters">What moves the bottleneck?</h2>
+        <dl class="hardware-definitions">
+          <div><dt>Quantization</dt><dd>Smaller weights use less memory and require less bandwidth. Very small formats can trade away model quality or use kernels that are less efficient on a given backend.</dd></div>
+          <div><dt>Context length</dt><dd>More tokens grow the KV cache and increase attention work. The exact rate depends on the model architecture and cache type.</dd></div>
+          <div><dt>Batch size and concurrency</dt><dd>More work in parallel can use GPU compute better, but each active sequence needs cache space. Throughput can rise while latency and memory use also rise.</dd></div>
+          <div><dt>Dense versus MoE</dt><dd>A dense model uses all of its layers for each token. A mixture-of-experts model routes each token through a subset of experts, but the system may still need to store a much larger set of weights. Capacity and expert-routing communication can dominate even when active compute is lower.</dd></div>
+          <div><dt>Multimodal inputs</dt><dd>Vision or audio projectors add weights, buffers, and prompt-processing work. Image resolution and input count can add many effective tokens.</dd></div>
+          <div><dt>Backend and kernels</dt><dd>The driver and runtime must support the device, model operations, data types, and quantization format. Peak hardware figures mean little when the backend falls back or uses weak kernels.</dd></div>
+        </dl>
+      </section>
+
+      <section aria-labelledby="green-room-case">
+        <h2 id="green-room-case">Case study: the Green Room</h2>
+        <p>The Green Room has an Intel i5-6500, 16 GB of DDR4-2133, a Radeon R9 390 with 8 GB of GDDR5, an ASRock Fatal1ty Z270 Gaming K4, a 750 W PSU, and a 230 GB hard drive from 2014 <a class="inline-citation" href="../initial-setup/index.html">[Green Room initial setup]</a>. It is a fine machine for learning where the edges are. It has quite a few edges.</p>
+
+        <h3>Capacity: small quantized models are the sensible target</h3>
+        <p>The 8 GB R9 390 can hold some 7–8B-class Q4 model files with limited context, but that is not a guarantee <a class="inline-citation" href="#source-quantize">[llama.cpp model-size example, accessed 2026-08-14]</a> <a class="inline-citation" href="#source-amd-r9">[AMD specifications, accessed 2026-08-14]</a>. The GGUF file size, KV cache, compute buffers, display use, and backend allocations all count. The 16 GB of system RAM gives CPU inference more room, yet Windows and the runtime need their share. Paging a model to the old hard drive would turn a capacity problem into a storage problem.</p>
+
+        <h3>Bandwidth: a large theoretical gap</h3>
+        <p>Intel specifies a maximum memory bandwidth of 34.1 GB/s for the i5-6500’s dual-channel controller <a class="inline-citation" href="#source-intel">[Intel specifications, accessed 2026-08-14]</a>. AMD specifies up to 384 GB/s for the R9 390’s VRAM <a class="inline-citation" href="#source-amd-r9">[AMD specifications, accessed 2026-08-14]</a>. Dividing those figures gives a theoretical ratio of about 11.3 to 1.</p>
+        <p>That ratio is not a benchmark. Different kernels, quantization formats, memory-access patterns, and driver paths change achieved speed. The GPU wins only if the backend can use it well and the working set stays in VRAM.</p>
+
+        <h3>Software: the biggest question mark</h3>
+        <p>AMD lists the R9 390 under Windows legacy drivers and states that it plans no additional driver releases <a class="inline-citation" href="#source-amd-r9">[AMD driver page, accessed 2026-08-14]</a>. AMD’s current Radeon ROCm support tables list modern Radeon 9000 and selected 7000-series devices, not the R9 390 <a class="inline-citation" href="#source-rocm">[AMD ROCm compatibility tables, accessed 2026-08-14]</a>.</p>
+        <p>That makes ROCm a poor assumption for this box. llama.cpp documents a Vulkan backend and Windows build path <a class="inline-citation" href="#source-vulkan">[llama.cpp build guide, accessed 2026-08-14]</a>. Vulkan is therefore the practical GPU path to test first. It is not a promise of full offload, stable kernels, or good speed on this legacy card. CPU-only llama.cpp remains the control test.</p>
+
+        <h3>A second GPU is a bad first upgrade</h3>
+        <p>The board’s first long slot runs at PCIe 3.0 ×16. ASRock specifies the second long slot at ×4, and it can drop to ×2 when either of two nearby slots is occupied <a class="inline-citation" href="#source-asrock">[ASRock specifications, accessed 2026-08-14]</a>. A second GPU would also add driver, cooling, power, and model-splitting problems. A 750 W label alone does not prove that the unit, cables, rails, and thermals can support any chosen pair.</p>
+        <p>Layer splitting might add capacity, but the weaker slot and old platform would constrain transfers. Tensor parallelism would ask even more from that connection. On this board, two GPUs could produce twice the heat and one very educational bottleneck.</p>
+
+        <h3>Upgrade in the order the measurements point</h3>
+        <ol class="upgrade-list">
+          <li><strong>Loading is slow or the system pages:</strong> replace the HDD with an SSD.</li>
+          <li><strong>The model does not fit:</strong> add the type of memory used by the chosen mode. That means RAM for CPU work or VRAM for full GPU offload.</li>
+          <li><strong>Generation is slow after the model fits:</strong> favor supported hardware with high memory bandwidth and an efficient backend.</li>
+          <li><strong>Prompt processing is slow:</strong> favor stronger accelerator compute and kernels.</li>
+          <li><strong>CPU and hybrid modes stay slow:</strong> replace the CPU, memory, and motherboard as one platform. Upgrading one old link leaves the other old links in place.</li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="benchmark-guide">
+        <h2 id="benchmark-guide">Benchmark the path, not the marketing number</h2>
+        <p>Use one model file, prompt, context size, output length, and software build. Warm up the model. Then change one variable at a time: CPU threads, GPU-offloaded layers, cache type, context length, or parallel sequences.</p>
+        <div class="table-scroll" tabindex="0" aria-label="Local LLM benchmark metrics">
+          <table class="hardware-table">
+            <thead><tr><th>Metric</th><th>What it reveals</th><th>Record with it</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Prompt processing, tokens/s</th><td>Prefill compute and kernel efficiency</td><td>Prompt length and batch size</td></tr>
+              <tr><th scope="row">Generation, tokens/s</th><td>Interactive decode speed and active-memory bandwidth</td><td>Generated tokens and context depth</td></tr>
+              <tr><th scope="row">Time to first token</th><td>Load, queue, prompt, and setup latency as the user feels it</td><td>Warm or cold start</td></tr>
+              <tr><th scope="row">RAM and VRAM peak</th><td>Capacity headroom and hidden spills</td><td>Display use and concurrent sequences</td></tr>
+              <tr><th scope="row">Power and temperature</th><td>Efficiency, throttling, and stability</td><td>Clock speed and test duration</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><code>llama-bench</code> separates prompt-processing tests from text-generation tests, repeats runs, and reports average tokens per second. Its measurements exclude tokenization and sampling, so a full application can feel slower <a class="inline-citation" href="#source-bench">[llama.cpp benchmark guide, accessed 2026-08-14]</a>.</p>
+        <p>For the Green Room, I would compare CPU only, a small partial Vulkan offload, and the largest stable offload that fits. I would record failures too. An out-of-memory error, a driver crash, or a slower hybrid result identifies a limit as clearly as a tokens-per-second number.</p>
+      </section>
+
+      <section aria-labelledby="training-contrast">
+        <h2 id="training-contrast">Inference is the easy memory case</h2>
+        <p>Inference mainly needs weights, KV cache, activations for the current work, and runtime buffers. Fine-tuning must also retain more activations and gradients. Full training adds optimizer state and often higher-precision master weights. Batch size then has a much larger effect on memory.</p>
+        <p>Techniques such as parameter-efficient fine-tuning, activation checkpointing, gradient accumulation, and optimizer-state sharding change that equation. They deserve their own map. The practical lesson here is simple: hardware that fits a model for inference may still be far too small to train it.</p>
+      </section>
+
+      <section aria-labelledby="checklist">
+        <h2 id="checklist">Find your bottleneck</h2>
+        <ul class="checklist">
+          <li><strong>Capacity:</strong> Do weights, KV cache, buffers, and headroom fit without paging or out-of-memory errors?</li>
+          <li><strong>Bandwidth:</strong> Does generation stay slow while compute units wait for memory?</li>
+          <li><strong>Compute:</strong> Is prompt processing slow even when the model and data remain on the accelerator?</li>
+          <li><strong>Transfer:</strong> Does partial offload or a second GPU add little speed or make latency worse?</li>
+          <li><strong>Software:</strong> Does the backend support the device, data type, model operations, and quantization format?</li>
+          <li><strong>Power and cooling:</strong> Do clocks fall, temperatures climb, or errors appear during a sustained run?</li>
+        </ul>
+        <p>Measure the phase that feels slow. Fix that limit. Then measure again, because the reward for removing one bottleneck is meeting the next one.</p>
+      </section>
+
+      <section class="sources" aria-labelledby="sources-title">
+        <h2 id="sources-title">Sources</h2>
+        <p>All web sources were checked on August 14, 2026.</p>
+        <ol>
+          <li id="source-nvidia"><a href="https://developer.nvidia.com/blog/mastering-llm-techniques-inference-optimization/">NVIDIA, “Mastering LLM Techniques: Inference Optimization”</a>, published November 17, 2023.</li>
+          <li id="source-multi-gpu"><a href="https://github.com/ggml-org/llama.cpp/blob/master/docs/multi-gpu.md">llama.cpp, “Using multiple GPUs with llama.cpp”</a>.</li>
+          <li id="source-quantize"><a href="https://github.com/ggml-org/llama.cpp/blob/master/tools/quantize/README.md">llama.cpp quantization guide</a>.</li>
+          <li id="source-bench"><a href="https://github.com/ggml-org/llama.cpp/blob/master/tools/llama-bench/README.md">llama.cpp benchmark guide</a>.</li>
+          <li id="source-vulkan"><a href="https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#vulkan">llama.cpp build guide: Vulkan</a>.</li>
+          <li id="source-hf-kv"><a href="https://huggingface.co/docs/transformers/kv_cache">Hugging Face Transformers, “Cache strategies”</a>.</li>
+          <li id="source-accelerate"><a href="https://huggingface.co/docs/accelerate/main/usage_guides/big_modeling">Hugging Face Accelerate, “Big Model Inference”</a>.</li>
+          <li id="source-vllm"><a href="https://docs.vllm.ai/en/stable/serving/data_parallel_deployment/">vLLM, “Data Parallel Deployment”</a>.</li>
+          <li id="source-mlx"><a href="https://ml-explore.github.io/mlx/build/html/usage/unified_memory.html">MLX, “Unified Memory”</a>.</li>
+          <li id="source-intel"><a href="https://www.intel.com/content/www/us/en/products/sku/88184/intel-core-i56500-processor-6m-cache-up-to-3-60-ghz/specifications.html">Intel Core i5-6500 specifications</a>.</li>
+          <li id="source-amd-r9"><a href="https://www.amd.com/en/support/downloads/drivers.html/graphics/radeon-r9-r7-r5/radeon-r9-300-series/amd-radeon-r9-390.html">AMD Radeon R9 390 drivers and specifications</a>.</li>
+          <li id="source-asrock"><a href="https://www.asrock.com/mb/Intel/Fatal1ty%20Z270%20Gaming%20K4/">ASRock Fatal1ty Z270 Gaming K4 specifications</a>.</li>
+          <li id="source-rocm"><a href="https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/compatibility.html">AMD, ROCm on Radeon compatibility matrices</a>.</li>
+          <li id="source-nist"><a href="https://www.physics.nist.gov/cuu/Units/binary.html">NIST, “Definitions of the SI units: The binary prefixes”</a>.</li>
+        </ol>
+      </section>
+
+      <p class="article-back-link"><a href="../index.html">← Back to the Green Room</a></p>
+    </article>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme: 'neutral',
+      themeVariables: {
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        primaryColor: '#fff0e6',
+        primaryTextColor: '#1d1f21',
+        primaryBorderColor: '#d95a14',
+        lineColor: '#596168',
+        secondaryColor: '#e7f0f7',
+        tertiaryColor: '#f7f7f5',
+        clusterBkg: '#fbfbfa',
+        clusterBorder: '#8b9298',
+        edgeLabelBackground: '#f7f7f5'
+      },
+      themeCSS: `
+        .cluster-label text { font-weight: 700; }
+        .edgeLabel text { font-size: 13px; }
+      `,
+      flowchart: {
+        htmlLabels: false,
+        useMaxWidth: true,
+        curve: 'basis',
+        nodeSpacing: 30,
+        rankSpacing: 42,
+        diagramPadding: 16
+      }
+    });
+
+    const diagramStyles = `
+      classDef memory fill:#e7f0f7,stroke:#3f6f8f,color:#17232b,stroke-width:1px
+      classDef compute fill:#fff0e6,stroke:#d95a14,color:#2b211c,stroke-width:1px
+      classDef transfer fill:#f4f1e8,stroke:#8a795b,color:#2a261f,stroke-width:1px
+      classDef process fill:#edf4e8,stroke:#5f7f50,color:#1d2818,stroke-width:1px
+      classDef support fill:#eeeaf5,stroke:#6e5b86,color:#241e2b,stroke-width:1px
+      classDef file fill:#f3f4f5,stroke:#6b737b,color:#202427,stroke-width:1px
+    `;
+
+    const modes = {
+      overview: {
+        label: 'Overview of local LLM hardware dependencies',
+        placement: 'Weights and cache can live in RAM, VRAM, or both.',
+        bottleneck: 'The slowest capacity, bandwidth, compute, transfer, or software limit.',
+        graph: `flowchart LR
+          subgraph Storage["Storage"]
+            direction TB
+            ModelFile["Model file"]
+          end
+
+          subgraph RAM["RAM"]
+            direction TB
+            RAMWeights["CPU weights"]
+            RAMCache["CPU-side KV cache"]
+            RAMBuffers["Working buffers"]
+          end
+
+          subgraph CPU["CPU"]
+            direction TB
+            HostWork["Tokenize, sample, orchestrate"]
+            CPUCompute["CPU layers"]
+          end
+
+          subgraph Bus["Motherboard / PCIe"]
+            direction TB
+            HostLink["Host ↔ device transfers"]
+          end
+
+          subgraph GPU["GPU"]
+            direction TB
+            subgraph VRAM["VRAM"]
+              direction TB
+              GPUWeights["Model weights"]
+              GPUCache["KV cache"]
+              GPUBuffers["Compute buffers"]
+            end
+            GPUCompute["Accelerator compute"]
+            GPUWeights --> GPUCompute
+            GPUCache --> GPUCompute
+            GPUBuffers --> GPUCompute
+          end
+
+          subgraph Software["Software"]
+            direction TB
+            Backend["Backend"]
+            Driver["Drivers + kernels"]
+            Backend --> Driver
+          end
+
+          subgraph Power["Power + cooling"]
+            direction TB
+            Sustained["Sustained clocks"]
+          end
+
+          subgraph Phases["Inference phases"]
+            direction LR
+            Load["Load"] --> Prefill["Prefill"] --> Decode["Decode"]
+          end
+
+          ModelFile --> Load
+          Load --> RAMWeights
+          RAMWeights --> CPUCompute
+          RAMCache --> CPUCompute
+          RAMBuffers --> HostWork
+          RAMWeights -->|"offload"| HostLink
+          HostLink --> GPUWeights
+          CPUCompute --> Prefill
+          GPUCompute --> Prefill
+          HostWork -.-> Load
+          Driver -.-> CPUCompute
+          Driver -.-> GPUCompute
+          Sustained -.-> CPUCompute
+          Sustained -.-> GPUCompute
+
+          class ModelFile file
+          class RAMWeights,RAMCache,RAMBuffers,GPUWeights,GPUCache,GPUBuffers memory
+          class HostWork,CPUCompute,GPUCompute compute
+          class HostLink transfer
+          class Backend,Driver support
+          class Sustained,Load,Prefill,Decode process
+          style Storage fill:#fbfcfd,stroke:#6b737b,stroke-width:1px
+          style RAM fill:#f5f9fc,stroke:#3f6f8f,stroke-width:2px
+          style CPU fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style Bus fill:#faf8f2,stroke:#8a795b,stroke-width:2px
+          style GPU fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style VRAM fill:#f5f9fc,stroke:#3f6f8f,stroke-width:1px
+          style Software fill:#faf8fc,stroke:#6e5b86,stroke-width:2px
+          style Power fill:#f8fbf6,stroke:#5f7f50,stroke-width:2px
+          style Phases fill:#f8fbf6,stroke:#5f7f50,stroke-width:2px
+          ${diagramStyles}`
+      },
+      cpu: {
+        label: 'CPU-only local LLM inference',
+        placement: 'Weights, KV cache, and buffers live in system RAM. The CPU performs the model math.',
+        bottleneck: 'RAM capacity first; RAM bandwidth and CPU compute after the model fits.',
+        graph: `flowchart LR
+          subgraph Storage["Storage"]
+            ModelFile["Model file"]
+          end
+
+          subgraph RAM["RAM"]
+            direction TB
+            Weights["Model weights"]
+            Cache["KV cache"]
+            Buffers["Working buffers"]
+          end
+
+          subgraph CPU["CPU"]
+            direction TB
+            ModelLayers["All model layers"]
+            CPUCompute["General-purpose + vector compute"]
+            ModelLayers --> CPUCompute
+          end
+
+          subgraph Platform["Memory platform"]
+            direction TB
+            Channels["Memory channels"]
+            Controller["Memory controller"]
+          end
+
+          subgraph Software["Software"]
+            Backend["CPU backend + kernels"]
+          end
+
+          subgraph Phases["Inference phases"]
+            direction TB
+            Prefill["Prompt processing"] --> Decode["Token generation"]
+          end
+
+          ModelFile -->|"load"| Weights
+          Weights --> ModelLayers
+          Cache --> CPUCompute
+          Buffers --> CPUCompute
+          CPUCompute --> Prefill
+          Channels -.-> Weights
+          Controller -.-> Weights
+          Backend -.-> CPUCompute
+          Cooling["Power + cooling"] -.-> CPUCompute
+
+          class ModelFile file
+          class Weights,Cache,Buffers memory
+          class ModelLayers,CPUCompute compute
+          class Channels,Controller transfer
+          class Backend support
+          class Cooling,Prefill,Decode process
+          style Storage fill:#fbfcfd,stroke:#6b737b,stroke-width:1px
+          style RAM fill:#f5f9fc,stroke:#3f6f8f,stroke-width:2px
+          style CPU fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style Platform fill:#faf8f2,stroke:#8a795b,stroke-width:2px
+          style Software fill:#faf8fc,stroke:#6e5b86,stroke-width:2px
+          style Phases fill:#f8fbf6,stroke:#5f7f50,stroke-width:2px
+          ${diagramStyles}`
+      },
+      gpu: {
+        label: 'Full single-GPU local LLM inference',
+        placement: 'Weights, KV cache, and compute buffers stay in VRAM. The CPU handles setup and orchestration.',
+        bottleneck: 'VRAM capacity, then VRAM bandwidth for decode and GPU compute for prefill.',
+        graph: `flowchart LR
+          subgraph Storage["Storage"]
+            ModelFile["Model file"]
+          end
+
+          subgraph RAM["RAM"]
+            Staging["Load staging"]
+          end
+
+          subgraph CPU["CPU"]
+            HostWork["Tokenize, sample, orchestrate"]
+          end
+
+          subgraph Bus["Motherboard / PCIe"]
+            Transfer["Host ↔ device transfer"]
+          end
+
+          subgraph GPU["GPU"]
+            direction TB
+            subgraph VRAM["VRAM"]
+              direction TB
+              Weights["Model weights"]
+              Cache["KV cache"]
+              Buffers["Compute buffers"]
+            end
+            Compute["Accelerator compute"]
+            Weights --> Compute
+            Cache --> Compute
+            Buffers --> Compute
+          end
+
+          subgraph Software["Software"]
+            direction TB
+            Backend["GPU backend"]
+            Drivers["Drivers + kernels"]
+            Backend --> Drivers
+          end
+
+          subgraph Phases["Inference phases"]
+            direction TB
+            Prefill["Prefill"] --> Decode["Decode"]
+          end
+
+          ModelFile --> Staging --> Transfer --> Weights
+          HostWork -.-> Transfer
+          Drivers -.-> Compute
+          Cooling["Power + cooling"] -.-> Compute
+          Compute --> Prefill
+
+          class ModelFile file
+          class Staging,Weights,Cache,Buffers memory
+          class HostWork,Compute compute
+          class Transfer transfer
+          class Backend,Drivers support
+          class Cooling,Prefill,Decode process
+          style Storage fill:#fbfcfd,stroke:#6b737b,stroke-width:1px
+          style RAM fill:#f5f9fc,stroke:#3f6f8f,stroke-width:2px
+          style CPU fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style Bus fill:#faf8f2,stroke:#8a795b,stroke-width:2px
+          style GPU fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style VRAM fill:#f5f9fc,stroke:#3f6f8f,stroke-width:1px
+          style Software fill:#faf8fc,stroke:#6e5b86,stroke-width:2px
+          style Phases fill:#f8fbf6,stroke:#5f7f50,stroke-width:2px
+          ${diagramStyles}`
+      },
+      hybrid: {
+        label: 'Partial CPU and GPU layer offload',
+        placement: 'Some layers live in RAM and run on the CPU. Other layers live in VRAM and run on the GPU.',
+        bottleneck: 'The slower layer group and transfers between RAM and VRAM set end-to-end speed.',
+        graph: `flowchart LR
+          Input["Token state"]
+
+          subgraph RAM["RAM"]
+            direction TB
+            CPUWeights["CPU-resident weights"]
+            CPUCache["CPU-side KV cache"]
+          end
+
+          subgraph CPU["CPU"]
+            CPULayers["CPU layers"]
+          end
+
+          subgraph Bus["Motherboard / PCIe"]
+            Handoff["Layer-state handoff"]
+          end
+
+          subgraph GPU["GPU"]
+            direction TB
+            subgraph VRAM["VRAM"]
+              direction TB
+              GPUWeights["Offloaded weights"]
+              GPUCache["GPU-side KV cache"]
+              Buffers["Compute buffers"]
+            end
+            GPUCompute["Accelerator compute"]
+            GPUWeights --> GPUCompute
+            GPUCache --> GPUCompute
+            Buffers --> GPUCompute
+          end
+
+          subgraph Software["Software"]
+            Placement["Layer placement"]
+          end
+
+          Input --> CPULayers
+          CPUWeights --> CPULayers
+          CPUCache --> CPULayers
+          CPULayers --> Handoff --> GPUCompute
+          GPUCompute --> Output["Next token"]
+          Placement -.-> CPULayers
+          Placement -.-> GPUCompute
+
+          class Input,Output process
+          class CPUWeights,CPUCache,GPUWeights,GPUCache,Buffers memory
+          class CPULayers,GPUCompute compute
+          class Handoff transfer
+          class Placement support
+          style RAM fill:#f5f9fc,stroke:#3f6f8f,stroke-width:2px
+          style CPU fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style Bus fill:#faf8f2,stroke:#8a795b,stroke-width:2px
+          style GPU fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style VRAM fill:#f5f9fc,stroke:#3f6f8f,stroke-width:1px
+          style Software fill:#faf8fc,stroke:#6e5b86,stroke-width:2px
+          ${diagramStyles}`
+      },
+      'kv-offload': {
+        label: 'GPU inference with the KV cache offloaded to system RAM',
+        placement: 'Weights stay in VRAM. Most KV-cache data stays in RAM and moves to the GPU as layers need it.',
+        bottleneck: 'RAM capacity improves, but PCIe traffic and cache movement can reduce generation speed.',
+        graph: `flowchart LR
+          subgraph RAM["RAM"]
+            OffloadedCache["Offloaded KV cache"]
+          end
+
+          subgraph Bus["Motherboard / PCIe"]
+            CacheTransfer["Prefetch + eviction"]
+          end
+
+          subgraph GPU["GPU"]
+            direction TB
+            subgraph VRAM["VRAM"]
+              direction TB
+              Weights["Model weights"]
+              CurrentCache["Current-layer cache"]
+              Buffers["Compute buffers"]
+            end
+            Compute["Accelerator compute"]
+            Weights --> Compute
+            CurrentCache <--> Compute
+            Buffers --> Compute
+          end
+
+          subgraph Software["Software"]
+            Backend["Cache-aware backend"]
+          end
+
+          OffloadedCache <--> CacheTransfer <--> CurrentCache
+          Backend -.-> OffloadedCache
+          Backend -.-> CurrentCache
+          Compute --> Output["Next token"]
+
+          class Output process
+          class OffloadedCache,Weights,CurrentCache,Buffers memory
+          class Compute compute
+          class CacheTransfer transfer
+          class Backend support
+          style RAM fill:#f5f9fc,stroke:#3f6f8f,stroke-width:2px
+          style Bus fill:#faf8f2,stroke:#8a795b,stroke-width:2px
+          style GPU fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style VRAM fill:#f5f9fc,stroke:#3f6f8f,stroke-width:1px
+          style Software fill:#faf8fc,stroke:#6e5b86,stroke-width:2px
+          ${diagramStyles}`
+      },
+      'multi-gpu': {
+        label: 'Three distinct multi-GPU strategies',
+        placement: 'Layer and tensor modes split one model. Data parallelism keeps a full copy on each GPU.',
+        bottleneck: 'GPU-to-GPU communication, PCIe topology, balance, and per-GPU capacity.',
+        graph: `flowchart TB
+          Choice{"Why add GPUs?"}
+
+          subgraph LayerMode["Layer / pipeline split"]
+            direction LR
+            subgraph LayerGPU1["GPU 1"]
+              direction TB
+              LWeights1["Early-layer weights"]
+              LCompute1["Accelerator compute"]
+              LWeights1 --> LCompute1
+            end
+            PipelineLink["Activation handoff"]
+            subgraph LayerGPU2["GPU 2"]
+              direction TB
+              LWeights2["Later-layer weights"]
+              LCompute2["Accelerator compute"]
+              LWeights2 --> LCompute2
+            end
+            LCompute1 --> PipelineLink --> LCompute2
+          end
+
+          subgraph TensorMode["Tensor parallel"]
+            direction LR
+            subgraph TensorGPU1["GPU 1"]
+              direction TB
+              TShard1["Tensor shard A"]
+              TCompute1["Accelerator compute"]
+              TShard1 --> TCompute1
+            end
+            Reduction["Cross-GPU reduction"]
+            subgraph TensorGPU2["GPU 2"]
+              direction TB
+              TShard2["Tensor shard B"]
+              TCompute2["Accelerator compute"]
+              TShard2 --> TCompute2
+            end
+            TCompute1 <--> Reduction <--> TCompute2
+          end
+
+          subgraph DataMode["Data parallel"]
+            direction LR
+            Queue["Independent request queue"]
+            subgraph DataGPU1["GPU 1"]
+              direction TB
+              DModel1["Full model copy"]
+              DBatch1["Request batch A"]
+              DModel1 --> DBatch1
+            end
+            subgraph DataGPU2["GPU 2"]
+              direction TB
+              DModel2["Full model copy"]
+              DBatch2["Request batch B"]
+              DModel2 --> DBatch2
+            end
+            Queue --> DBatch1
+            Queue --> DBatch2
+          end
+
+          subgraph Platform["Motherboard topology"]
+            direction LR
+            CPULanes["CPU / chipset lanes"]
+            PeerSupport["Peer-transfer support"]
+          end
+
+          Choice --> LWeights1
+          Choice --> TShard1
+          Choice --> Queue
+          CPULanes -.-> PipelineLink
+          CPULanes -.-> Reduction
+          PeerSupport -.-> Reduction
+
+          class Choice process
+          class LWeights1,LWeights2,TShard1,TShard2,DModel1,DModel2 memory
+          class LCompute1,LCompute2,TCompute1,TCompute2,DBatch1,DBatch2 compute
+          class PipelineLink,Reduction,CPULanes,PeerSupport transfer
+          class Queue support
+          style LayerMode fill:#fbfbfa,stroke:#8b9298,stroke-width:2px
+          style TensorMode fill:#fbfbfa,stroke:#8b9298,stroke-width:2px
+          style DataMode fill:#fbfbfa,stroke:#8b9298,stroke-width:2px
+          style LayerGPU1 fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style LayerGPU2 fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style TensorGPU1 fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style TensorGPU2 fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style DataGPU1 fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style DataGPU2 fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style Platform fill:#faf8f2,stroke:#8a795b,stroke-width:2px
+          ${diagramStyles}`
+      },
+      unified: {
+        label: 'Unified-memory local LLM inference',
+        placement: 'The CPU and GPU access one physical memory pool instead of separate RAM and VRAM pools.',
+        bottleneck: 'Total shared capacity, shared-memory bandwidth, compute, and backend efficiency.',
+        graph: `flowchart LR
+          subgraph Storage["Storage"]
+            ModelFile["Model file"]
+          end
+
+          subgraph Unified["Unified memory"]
+            direction TB
+            Weights["Model weights"]
+            Cache["KV cache"]
+            Buffers["Working buffers"]
+          end
+
+          subgraph CPU["CPU"]
+            CPUCompute["General-purpose + vector compute"]
+          end
+
+          subgraph GPU["GPU"]
+            GPUCompute["Accelerator compute"]
+          end
+
+          subgraph Software["Software"]
+            direction TB
+            Backend["Backend"]
+            Scheduler["Dependency scheduler"]
+            Backend --> Scheduler
+          end
+
+          subgraph Phases["Inference phases"]
+            direction TB
+            Prefill["Prefill"] --> Decode["Decode"]
+          end
+
+          ModelFile -->|"load"| Weights
+          Weights --> CPUCompute
+          Weights --> GPUCompute
+          Cache --> CPUCompute
+          Cache --> GPUCompute
+          Buffers --> CPUCompute
+          Buffers --> GPUCompute
+          Scheduler -.-> CPUCompute
+          Scheduler -.-> GPUCompute
+          CPUCompute --> Prefill
+          GPUCompute --> Prefill
+          Cooling["Power + cooling"] -.-> CPUCompute
+          Cooling -.-> GPUCompute
+
+          class ModelFile file
+          class Weights,Cache,Buffers memory
+          class CPUCompute,GPUCompute compute
+          class Backend,Scheduler support
+          class Cooling,Prefill,Decode process
+          style Storage fill:#fbfcfd,stroke:#6b737b,stroke-width:1px
+          style Unified fill:#f5f9fc,stroke:#3f6f8f,stroke-width:2px
+          style CPU fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style GPU fill:#fffaf6,stroke:#d95a14,stroke-width:2px
+          style Software fill:#faf8fc,stroke:#6e5b86,stroke-width:2px
+          style Phases fill:#f8fbf6,stroke:#5f7f50,stroke-width:2px
+          ${diagramStyles}`
+      }
+    };
+
+    const diagram = document.getElementById('hardware-map-diagram');
+    const placement = document.getElementById('map-placement');
+    const bottleneck = document.getElementById('map-bottleneck');
+    const expandedDialog = document.getElementById('hardware-map-dialog');
+    const expandedDiagram = document.getElementById('hardware-map-expanded');
+    const expandedTitle = document.getElementById('hardware-map-dialog-title');
+    const expandedPlacement = document.getElementById('expanded-map-placement');
+    const expandedBottleneck = document.getElementById('expanded-map-bottleneck');
+    const closeExpandedButton = document.getElementById('hardware-map-close');
+    const buttons = Array.from(document.querySelectorAll('[data-map-mode]'));
+    let renderCount = 0;
+    let activeModeName = 'overview';
+
+    async function paintGraph(target, mode, idPrefix, targetLabel = mode.label) {
+      renderCount += 1;
+      const renderId = `${idPrefix}-${renderCount}`;
+      const { svg, bindFunctions } = await mermaid.render(renderId, mode.graph);
+      target.innerHTML = svg;
+      target.setAttribute('aria-label', targetLabel);
+      const renderedSvg = target.querySelector('svg');
+      if (renderedSvg) {
+        renderedSvg.setAttribute('role', 'img');
+        renderedSvg.setAttribute('aria-label', mode.label);
+      }
+      if (bindFunctions) bindFunctions(target);
+    }
+
+    async function renderMode(modeName) {
+      const mode = modes[modeName];
+      if (!mode) return;
+
+      activeModeName = modeName;
+      buttons.forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.mapMode === modeName));
+      });
+      placement.textContent = mode.placement;
+      bottleneck.textContent = mode.bottleneck;
+      const openLabel = `Open ${mode.label.toLowerCase()} in a full-screen view`;
+
+      try {
+        await paintGraph(diagram, mode, 'hardware-map-svg', openLabel);
+      } catch (error) {
+        diagram.innerHTML = '<span class="diagram-status">The diagram could not render. Use the text map and tables below.</span>';
+        console.error('Hardware map render failed:', error);
+      }
+    }
+
+    async function openExpandedMap() {
+      const mode = modes[activeModeName];
+      if (!mode || expandedDialog.open) return;
+
+      expandedTitle.textContent = mode.label;
+      expandedPlacement.textContent = mode.placement;
+      expandedBottleneck.textContent = mode.bottleneck;
+      expandedDiagram.innerHTML = '<p class="diagram-status">Loading the full-screen map.</p>';
+
+      if (typeof expandedDialog.showModal === 'function') {
+        expandedDialog.showModal();
+      } else {
+        expandedDialog.setAttribute('open', '');
+      }
+      diagram.setAttribute('aria-expanded', 'true');
+
+      try {
+        await paintGraph(expandedDiagram, mode, 'hardware-map-expanded-svg');
+      } catch (error) {
+        expandedDiagram.innerHTML = '<p class="diagram-status">The full-screen diagram could not render. Close this view and use the text map below.</p>';
+        console.error('Expanded hardware map render failed:', error);
+      }
+    }
+
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => renderMode(button.dataset.mapMode));
+    });
+
+    diagram.addEventListener('click', openExpandedMap);
+    closeExpandedButton.addEventListener('click', () => expandedDialog.close());
+    expandedDialog.addEventListener('close', () => {
+      diagram.setAttribute('aria-expanded', 'false');
+      diagram.focus();
+    });
+
+    renderMode('overview');
+  </script>
+</body>
+</html>

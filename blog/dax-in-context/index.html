@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Learn DAX through five Northwind business questions about net sales, filter context, share, rank, and year-over-year growth.">
+  <title>DAX in Context: Five Business Questions, One Sales Model | Jaken96</title>
+  <link rel="stylesheet" href="../../style.css?v=20260817">
+</head>
+<body>
+  <nav aria-label="Primary navigation">
+    <a href="https://jaken96.github.io/">Home</a>
+    <a href="https://jaken96.github.io/poetry/">Poetry</a>
+    <a href="https://jaken96.github.io/blog/" aria-current="page">Blog</a>
+  </nav>
+
+  <main class="blog-post dax-article">
+    <article class="container">
+      <header>
+        <p class="post-label">Power BI · Technical tutorial</p>
+        <h1>DAX in Context: Five Business Questions, One Sales Model</h1>
+        <p class="lead">DAX functions make more sense when they have a job. This demo starts with one Northwind sales measure, then changes the evaluation context to answer five questions that a business could act on.</p>
+        <p class="post-meta">Drafted August 17, 2026 · Source results checked against Microsoft Northwind</p>
+      </header>
+
+      <section aria-labelledby="why-context">
+        <h2 id="why-context">The hard part is context, not syntax</h2>
+        <p>A list of DAX functions did not help me understand DAX. The same measure can return a company total, a country total, or a prior-year total without changing its base formula. The model and the current context decide which rows the measure can see.</p>
+        <div class="dax-concept-grid">
+          <div class="dax-concept-card">
+            <h3>Grain</h3>
+            <p>What one row represents. In <code>FactSales</code>, one row is one product line on one order.</p>
+          </div>
+          <div class="dax-concept-card">
+            <h3>Row context</h3>
+            <p>The current row while an iterator such as <code>SUMX</code> evaluates an expression.</p>
+          </div>
+          <div class="dax-concept-card">
+            <h3>Filter context</h3>
+            <p>The active slice of the model, such as Germany, April 1998, or one company.</p>
+          </div>
+        </div>
+        <p>The five problems below keep the sales rule stable. Each new answer comes from a deliberate change to context.</p>
+      </section>
+
+      <section aria-labelledby="data-model">
+        <h2 id="data-model">Build the model before the measures</h2>
+        <p>I used the official <a href="https://github.com/microsoft/sql-server-samples/blob/master/samples/databases/northwind-pubs/instnwnd.sql">Microsoft Northwind SQL script</a> instead of republishing a third-party CSV mirror. The repository uses the MIT license. The source contains 91 customers, 830 orders, and 2,155 order lines dated July 4, 1996 through May 6, 1998.</p>
+        <p>I shaped the normalized source into two fact tables and five dimensions. <code>FactSales</code> holds line-level quantity, historical unit price, and discount. <code>FactOrders</code> holds one row per order, so freight and shipping dates are not repeated for every product line. Microsoft recommends clear fact and dimension roles for Power BI semantic models <a class="inline-citation" href="#source-star-schema">[Microsoft star-schema guidance; accessed 2026-08-17]</a>.</p>
+
+        <figure class="dax-model-figure">
+          <pre class="mermaid" aria-label="Northwind Power BI star schema with five dimensions filtering FactSales and FactOrders">flowchart LR
+  Date["DimDate"] --> Sales["FactSales<br>one row per order line"]
+  Customer["DimCustomer"] --> Sales
+  Product["DimProduct"] --> Sales
+  Employee["DimEmployee"] --> Sales
+  Shipper["DimShipper"] --> Sales
+
+  Date --> Orders["FactOrders<br>one row per order"]
+  Customer --> Orders
+  Employee --> Orders
+  Shipper --> Orders</pre>
+          <figcaption>One-to-many, single-direction relationships run from each dimension to the facts. The two fact tables do not filter each other.</figcaption>
+        </figure>
+
+        <div class="text-map" aria-labelledby="model-text-title">
+          <h3 id="model-text-title">Text version of the model</h3>
+          <ul>
+            <li><code>DimDate</code>, <code>DimCustomer</code>, <code>DimEmployee</code>, and <code>DimShipper</code> filter both fact tables.</li>
+            <li><code>DimProduct</code> filters <code>FactSales</code>. I flattened the small category table into this dimension.</li>
+            <li><code>FactSales</code> and <code>FactOrders</code> have no direct relationship.</li>
+            <li><code>DimDate</code> is a continuous calendar and is marked as the model's date table.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section aria-labelledby="question-one">
+        <p class="post-label">Question 1</p>
+        <h2 id="question-one">What are net sales after line discounts?</h2>
+        <p>The source stores quantity, unit price, and discount on each order line. I must calculate the discounted value at that grain before I add the lines.</p>
+
+        <h3>First attempt: multiply the totals</h3>
+        <pre><code>Net Sales (wrong) :=
+    SUM ( FactSales[Quantity] )
+        * SUM ( FactSales[Unit Price] )
+        * ( 1 - SUM ( FactSales[Discount] ) )</code></pre>
+        <p>This formula multiplies unrelated column totals. It can also subtract several line-level discount rates from one. The result has no useful business meaning.</p>
+
+        <h3>Correct measure: calculate each line first</h3>
+        <pre><code>Net Sales :=
+SUMX (
+    FactSales,
+    FactSales[Quantity]
+        * FactSales[Unit Price]
+        * ( 1 - FactSales[Discount] )
+)</code></pre>
+        <p><code>SUMX</code> evaluates the expression once for each visible row in <code>FactSales</code>, then adds the results. That iteration creates the row context this rule needs <a class="inline-citation" href="#source-sumx">[Microsoft SUMX reference; accessed 2026-08-17]</a>.</p>
+        <aside class="dax-check" aria-label="Validation checkpoint">
+          <strong>Validation checkpoint:</strong> Across all 2,155 source lines, the measure returns <strong>$1,265,793.04</strong>. I calculated the same value independently from the Northwind script.
+        </aside>
+      </section>
+
+      <section aria-labelledby="question-two">
+        <p class="post-label">Question 2</p>
+        <h2 id="question-two">Which German companies bought the most in 1997?</h2>
+        <p>The full request is precise: show 1997 net sales to German customers, group the result by purchasing company, and put the largest value first.</p>
+
+        <h3>First attempt: return one hard-coded total</h3>
+        <pre><code>German Sales 1997 (incomplete) :=
+CALCULATE (
+    [Net Sales],
+    DimCustomer[Country] = "Germany",
+    YEAR ( FactSales[Order Date] ) = 1997
+)</code></pre>
+        <p>This measure gives one scalar value. It does not produce the requested company rows or a stable sort order. It also filters a fact-table date instead of using the model's calendar.</p>
+
+        <h3>Correct query: define, filter, group, and sort</h3>
+        <pre><code>DEFINE
+    MEASURE FactSales[Net Sales] =
+        SUMX (
+            FactSales,
+            FactSales[Quantity]
+                * FactSales[Unit Price]
+                * ( 1 - FactSales[Discount] )
+        )
+
+EVALUATE
+VAR StartDate = DATE ( 1997, 1, 1 )
+VAR EndDate = DATE ( 1997, 12, 31 )
+VAR TargetCountry = "Germany"
+RETURN
+    CALCULATETABLE (
+        SUMMARIZECOLUMNS (
+            DimCustomer[Company Name],
+            "Sales Volume", [Net Sales]
+        ),
+        KEEPFILTERS ( DimCustomer[Country] = TargetCountry ),
+        DATESBETWEEN ( DimDate[Date], StartDate, EndDate )
+    )
+ORDER BY
+    [Sales Volume] DESC,
+    DimCustomer[Company Name] ASC</code></pre>
+        <p>I run this in Power BI's DAX query view. A DAX query requires <code>EVALUATE</code>; its optional <code>DEFINE</code> block can add a query-scoped measure <a class="inline-citation" href="#source-query-view">[Microsoft DAX query view; accessed 2026-08-17]</a>.</p>
+        <p><code>CALCULATETABLE</code> evaluates a table expression in a modified filter context. <code>KEEPFILTERS</code> makes the country condition intersect with an existing country filter instead of replacing it. <code>DATESBETWEEN</code> supplies an inclusive date range from the marked calendar. <code>SUMMARIZECOLUMNS</code> creates one row per company, and <code>ORDER BY</code> makes the output deterministic <a class="inline-citation" href="#source-calculatetable">[Microsoft CALCULATETABLE reference; accessed 2026-08-17]</a> <a class="inline-citation" href="#source-keepfilters">[Microsoft KEEPFILTERS reference; accessed 2026-08-17]</a>.</p>
+
+        <div class="table-scroll" tabindex="0" aria-label="Validated 1997 net sales for German Northwind customers">
+          <table class="article-table">
+            <thead>
+              <tr>
+                <th scope="col">Rank</th>
+                <th scope="col">Company</th>
+                <th scope="col">Net sales</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td>QUICK-Stop</td><td>$61,109.91</td></tr>
+              <tr><td>2</td><td>Lehmanns Marktstand</td><td>$13,076.13</td></tr>
+              <tr><td>3</td><td>Frankenversand</td><td>$11,829.78</td></tr>
+              <tr><td>4</td><td>Königlich Essen</td><td>$9,664.21</td></tr>
+              <tr><td>5</td><td>Ottilies Käseladen</td><td>$8,254.27</td></tr>
+              <tr><td>6</td><td>Die Wandernde Kuh</td><td>$4,262.82</td></tr>
+              <tr><td>7</td><td>Morgenstern Gesundkost</td><td>$3,596.40</td></tr>
+              <tr><td>8</td><td>Alfreds Futterkiste</td><td>$2,022.50</td></tr>
+              <tr><td>9</td><td>Toms Spezialitäten</td><td>$2,004.34</td></tr>
+              <tr><td>10</td><td>Blauer See Delikatessen</td><td>$1,079.80</td></tr>
+              <tr><td>11</td><td>Drachenblut Delikatessen</td><td>$420.00</td></tr>
+            </tbody>
+            <tfoot>
+              <tr><th scope="row" colspan="2">Total</th><td><strong>$117,320.16</strong></td></tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="question-three">
+        <p class="post-label">Question 3</p>
+        <h2 id="question-three">What share of selected-country sales came from each company?</h2>
+        <p>The numerator is already correct: <code>[Net Sales]</code> in the current company row. The denominator needs the same date and country filters without the company-row filter.</p>
+
+        <h3>First attempt: remove every customer filter</h3>
+        <pre><code>Company Share (wrong) :=
+DIVIDE (
+    [Net Sales],
+    CALCULATE (
+        [Net Sales],
+        REMOVEFILTERS ( DimCustomer )
+    )
+)</code></pre>
+        <p>This denominator removes the company filter, but it also removes Germany. It answers “share of all customer sales,” not “share of German sales.”</p>
+
+        <h3>Correct measure: remove only the company row</h3>
+        <pre><code>Company Share of Selected Country :=
+VAR CompanySales = [Net Sales]
+VAR CountrySales =
+    CALCULATE (
+        [Net Sales],
+        REMOVEFILTERS ( DimCustomer[Company Name] )
+    )
+RETURN
+    DIVIDE ( CompanySales, CountrySales )</code></pre>
+        <p><code>REMOVEFILTERS</code> targets one column, so the country and date context remain. <code>DIVIDE</code> returns blank when the denominator is zero or blank unless I provide another result <a class="inline-citation" href="#source-removefilters">[Microsoft REMOVEFILTERS reference; accessed 2026-08-17]</a> <a class="inline-citation" href="#source-divide">[Microsoft DIVIDE reference; accessed 2026-08-17]</a>.</p>
+        <aside class="dax-check" aria-label="Validation checkpoint">
+          <strong>Validation checkpoint:</strong> With Germany and 1997 selected, QUICK-Stop contributes <strong>52.09%</strong> of the country's net sales.
+        </aside>
+      </section>
+
+      <section aria-labelledby="question-four">
+        <p class="post-label">Question 4</p>
+        <h2 id="question-four">How does each company rank inside the current selection?</h2>
+        <p>A rank should react to report filters. If a reader selects three companies, those three should rank first through third.</p>
+
+        <h3>First attempt: ignore the company selection</h3>
+        <pre><code>Company Rank (wrong) :=
+RANKX (
+    ALL ( DimCustomer[Company Name] ),
+    [Net Sales],
+    ,
+    DESC,
+    DENSE
+)</code></pre>
+        <p><code>ALL</code> removes every filter from the company-name column, including a company slicer. The rank still compares each visible row with companies the reader chose to exclude.</p>
+
+        <h3>Correct measure: rank the visible set</h3>
+        <pre><code>Company Rank in Selection :=
+IF (
+    ISINSCOPE ( DimCustomer[Company Name] ),
+    RANKX (
+        ALLSELECTED ( DimCustomer[Company Name] ),
+        [Net Sales],
+        ,
+        DESC,
+        DENSE
+    )
+)</code></pre>
+        <p><code>ALLSELECTED</code> removes the current company-row filter while it retains filters from outside the row, such as slicers. <code>RANKX</code> evaluates <code>[Net Sales]</code> for each company in that set. <code>ISINSCOPE</code> prevents the total row from pretending to be another company <a class="inline-citation" href="#source-allselected">[Microsoft ALLSELECTED reference; accessed 2026-08-17]</a> <a class="inline-citation" href="#source-rankx">[Microsoft RANKX reference; accessed 2026-08-17]</a> <a class="inline-citation" href="#source-isinscope">[Microsoft ISINSCOPE reference; accessed 2026-08-17]</a>.</p>
+        <p>With Germany and 1997 selected, the measure gives QUICK-Stop rank 1 and Drachenblut Delikatessen rank 11. If a slicer narrows the visible companies, the dense ranks close around that selection.</p>
+      </section>
+
+      <section aria-labelledby="question-five">
+        <p class="post-label">Question 5</p>
+        <h2 id="question-five">How did sales change from the same period one year earlier?</h2>
+        <p>A prior-year comparison must shift the active date set. Replacing one year label is not enough for an arbitrary day, month, or quarter selection.</p>
+
+        <h3>First attempt: replace only the year</h3>
+        <pre><code>Net Sales PY (wrong) :=
+CALCULATE (
+    [Net Sales],
+    DimDate[Year] = MAX ( DimDate[Year] ) - 1
+)</code></pre>
+        <p>This can appear to work on a year-only visual. It can fail when another date column still filters the current period, and it does not express the intended shift of the selected dates.</p>
+
+        <h3>Correct measures: shift the date context and divide safely</h3>
+        <pre><code>Net Sales PY :=
+CALCULATE (
+    [Net Sales],
+    DATEADD ( DimDate[Date], -1, YEAR )
+)
+
+Net Sales YoY % :=
+VAR CurrentSales = [Net Sales]
+VAR PriorSales = [Net Sales PY]
+RETURN
+    DIVIDE ( CurrentSales - PriorSales, PriorSales )</code></pre>
+        <p><code>DATEADD</code> returns the active dates shifted one year back. The base measure then evaluates under that new date context <a class="inline-citation" href="#source-dateadd">[Microsoft DATEADD reference; accessed 2026-08-17]</a>.</p>
+        <aside class="dax-check" aria-label="Validation checkpoint and data coverage warning">
+          <strong>Validation checkpoint:</strong> April 1998 net sales are <strong>$123,798.68</strong>, compared with <strong>$53,032.95</strong> in April 1997. The measure returns <strong>133.44%</strong> growth.
+          <br><br>
+          <strong>Coverage warning:</strong> Northwind ends on May 6, 1998. A full-year 1998 versus 1997 comparison would mix a partial year with a complete year. Correct DAX cannot repair a poorly framed comparison.
+        </aside>
+      </section>
+
+      <section aria-labelledby="pattern">
+        <h2 id="pattern">The reusable pattern</h2>
+        <p>These measures are easier to maintain because each one has one job.</p>
+        <div class="table-scroll" tabindex="0" aria-label="Summary of DAX business questions and context changes">
+          <table class="article-table">
+            <thead>
+              <tr>
+                <th scope="col">Business question</th>
+                <th scope="col">Stable calculation</th>
+                <th scope="col">Context change</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Net sales</td><td>Line value after discount</td><td><code>SUMX</code> creates row context.</td></tr>
+              <tr><td>Germany in 1997</td><td><code>[Net Sales]</code></td><td>Country and date filters constrain the rows.</td></tr>
+              <tr><td>Company share</td><td><code>[Net Sales]</code></td><td>Remove only the company-name filter for the denominator.</td></tr>
+              <tr><td>Company rank</td><td><code>[Net Sales]</code></td><td>Compare the row with companies kept by the report selection.</td></tr>
+              <tr><td>Year-over-year growth</td><td><code>[Net Sales]</code></td><td>Shift the active date set back one year.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The functions matter, but the model and the business question come first. Once the grain is clear and the base measure is correct, most of the work is deciding which filters to keep, replace, or remove.</p>
+      </section>
+
+      <section aria-labelledby="checks">
+        <h2 id="checks">Checks I would keep with the project</h2>
+        <ol class="checklist">
+          <li>Reconcile all net sales to <strong>$1,265,793.04</strong>.</li>
+          <li>Confirm that the 11 German company rows sum to <strong>$117,320.16</strong> for 1997.</li>
+          <li>Test zero-discount, discounted, and multi-line orders by hand.</li>
+          <li>Change the company slicer and confirm that rank follows the visible selection.</li>
+          <li>Test a period with no prior-year data and confirm that the growth measure returns blank.</li>
+          <li>Show the source's minimum and maximum order dates anywhere a reader could mistake partial periods for complete ones.</li>
+        </ol>
+        <p>A report page can make these answers attractive. A saved DAX query makes them testable. I want both.</p>
+      </section>
+
+      <section class="sources" aria-labelledby="sources-title">
+        <h2 id="sources-title">Sources</h2>
+        <p>Documentation was checked on August 17, 2026.</p>
+        <ul>
+          <li id="source-northwind"><a href="https://github.com/microsoft/sql-server-samples/blob/master/samples/databases/northwind-pubs/instnwnd.sql">Microsoft SQL Server Samples, Northwind installation script</a>.</li>
+          <li id="source-star-schema"><a href="https://learn.microsoft.com/en-us/power-bi/guidance/star-schema">Microsoft Learn, “Understand star schema and the importance for Power BI”</a>.</li>
+          <li id="source-sumx"><a href="https://learn.microsoft.com/en-us/dax/sumx-function-dax">Microsoft Learn, “SUMX”</a>.</li>
+          <li id="source-calculatetable"><a href="https://learn.microsoft.com/en-us/dax/calculatetable-function-dax">Microsoft Learn, “CALCULATETABLE”</a>.</li>
+          <li id="source-keepfilters"><a href="https://learn.microsoft.com/en-us/dax/keepfilters-function-dax">Microsoft Learn, “KEEPFILTERS”</a>.</li>
+          <li id="source-query-view"><a href="https://learn.microsoft.com/en-us/power-bi/transform-model/dax-query-view">Microsoft Learn, “Work with DAX query view”</a>.</li>
+          <li id="source-removefilters"><a href="https://learn.microsoft.com/en-us/dax/removefilters-function-dax">Microsoft Learn, “REMOVEFILTERS”</a>.</li>
+          <li id="source-divide"><a href="https://learn.microsoft.com/en-us/dax/divide-function-dax">Microsoft Learn, “DIVIDE”</a>.</li>
+          <li id="source-allselected"><a href="https://learn.microsoft.com/en-us/dax/allselected-function-dax">Microsoft Learn, “ALLSELECTED”</a>.</li>
+          <li id="source-rankx"><a href="https://learn.microsoft.com/en-us/dax/rankx-function-dax">Microsoft Learn, “RANKX”</a>.</li>
+          <li id="source-isinscope"><a href="https://learn.microsoft.com/en-us/dax/isinscope-function-dax">Microsoft Learn, “ISINSCOPE”</a>.</li>
+          <li id="source-dateadd"><a href="https://learn.microsoft.com/en-us/dax/dateadd-function-dax">Microsoft Learn, “DATEADD”</a>.</li>
+        </ul>
+      </section>
+
+      <p class="article-back-link"><a href="../index.html">← Back to the blog</a></p>
+    </article>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: 'strict',
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#fff7f1',
+        primaryBorderColor: '#d95a14',
+        primaryTextColor: '#1d1f21',
+        lineColor: '#6b737b',
+        secondaryColor: '#f2f5f7',
+        tertiaryColor: '#ffffff',
+        fontFamily: 'Arial, Helvetica, sans-serif'
+      }
+    });
+  </script>
+</body>
+</html>
